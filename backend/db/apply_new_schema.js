@@ -5,7 +5,7 @@ const path = require('path');
 
 // Database connection configuration
 const dbConfig = {
-  host: '192.168.0.139',
+  host: '68.146.102.33',
   port: 3306,
   user: 'rumfornew2',
   password: 'Oswald1986!',
@@ -15,8 +15,8 @@ const dbConfig = {
 async function createDatabase() {
   // First connect to MySQL without specifying a database
   const rootConnection = await mysql.createConnection({
-    host: dbConfig.host,
-    port: dbConfig.port,
+    host: '68.146.102.33',
+    port: 3306,
     user: 'root', // Need root privileges to create database and user
     password: 'Oswald1986!' // Root password
   });

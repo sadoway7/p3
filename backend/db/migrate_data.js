@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // Old database connection configuration
 const oldDbConfig = {
-  host: '192.168.0.139',
+  host: '68.146.102.33',
   port: 3306,
   user: 'root',
   password: 'Oswald1986!',
@@ -14,7 +14,7 @@ const oldDbConfig = {
 
 // New database connection configuration
 const newDbConfig = {
-  host: '192.168.0.139',
+  host: '68.146.102.33',
   port: 3306,
   user: 'rumfornew2',
   password: 'Oswald1986!',

@@ -17,7 +17,7 @@ function updateEnvFile(useNewDb = true) {
   
   // Define the old and new database configurations
   const oldDbConfig = {
-    DB_HOST: '192.168.0.139',
+    DB_HOST: '68.146.102.33',
     DB_PORT: '3306',
     DB_USER: 'root', // Replace with your actual user
     DB_PASSWORD: '', // Replace with your actual password
@@ -25,7 +25,7 @@ function updateEnvFile(useNewDb = true) {
   };
   
   const newDbConfig = {
-    DB_HOST: '192.168.0.139',
+    DB_HOST: '68.146.102.33',
     DB_PORT: '3306',
     DB_USER: 'rumfornew2',
     DB_PASSWORD: 'Oswald1986!',
