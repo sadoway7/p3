@@ -45,47 +45,10 @@ Additional Info:
 ================================================================
 Directory Structure
 ================================================================
-.git_disabled/COMMIT_EDITMSG
-.git_disabled/config
-.git_disabled/description
-.git_disabled/FETCH_HEAD
-.git_disabled/HEAD
-.git_disabled/hooks/applypatch-msg.sample
-.git_disabled/hooks/commit-msg.sample
-.git_disabled/hooks/fsmonitor-watchman.sample
-.git_disabled/hooks/post-update.sample
-.git_disabled/hooks/pre-applypatch.sample
-.git_disabled/hooks/pre-commit.sample
-.git_disabled/hooks/pre-merge-commit.sample
-.git_disabled/hooks/pre-push.sample
-.git_disabled/hooks/pre-rebase.sample
-.git_disabled/hooks/pre-receive.sample
-.git_disabled/hooks/prepare-commit-msg.sample
-.git_disabled/hooks/push-to-checkout.sample
-.git_disabled/hooks/sendemail-validate.sample
-.git_disabled/hooks/update.sample
-.git_disabled/info/exclude
-.git_disabled/ORIG_HEAD
-.git_disabled/refs/heads/main
-.git_disabled/refs/heads/refactor-new-database
-.git_disabled/refs/remotes/origin/main
 .gitignore
-API_PLAN.md
-ARCHIVED/backend/api/comments.js
-ARCHIVED/backend/api/communities.js
-ARCHIVED/backend/api/moderation.ts
-ARCHIVED/backend/api/posts.js
-ARCHIVED/backend/api/votes.js
-ARCHIVED/backend/middleware/moderation.js
-ARCHIVED/backend/routes/comments.js
-ARCHIVED/backend/routes/communities.js
-ARCHIVED/backend/routes/moderation.js
-ARCHIVED/backend/routes/posts.js
-ARCHIVED/backend/routes/users.js
-ARCHIVED/backend/routes/votes.js
-ARCHIVED/README.md
 backend/.env
 backend/.env.backup
+backend/activity-handler.js
 backend/api/activity.js
 backend/api/activity.ts
 backend/api/auth.js
@@ -119,6 +82,8 @@ backend/api/users.ts
 backend/api/votes.js
 backend/api/votes.js.new
 backend/api/votes.ts
+backend/check-community.js
+backend/check-tables.js
 backend/db/add_admin_user.js
 backend/db/apply_auth_schema.js
 backend/db/apply_comments_schema.js
@@ -132,6 +97,7 @@ backend/db/comments_schema_updates.sql
 backend/db/community_schema_updates.sql
 backend/db/connection.d.ts
 backend/db/connection.js
+backend/db/connection.ts
 backend/db/fetch_usernames.js
 backend/db/fix_community_api.js
 backend/db/fixed_schema.sql
@@ -152,6 +118,7 @@ backend/db/user_auth_schema.sql
 backend/db/user_statistics_schema.sql
 backend/db/votes_schema_update.sql
 backend/fix_moderator_usernames.js
+backend/fix-table-names.js
 backend/index.js
 backend/index.ts
 backend/middleware/activity.js
@@ -173,17 +140,19 @@ backend/routes/posts.js.new
 backend/routes/users.js
 backend/routes/votes.js
 backend/routes/votes.js.new
+backend/test-api.js
+backend/testServer.js
 backend/tsconfig.json
 backend/types/index.ts
 eslint.config.js
 index.html
 package.json
-PLACEHOLDERS.md
 postcss.config.js
 REFACTORING.md
 src/api/activities.ts
 src/api/comments.ts
 src/api/communities.ts
+src/api/compatibility.ts
 src/api/mockData.ts
 src/api/moderation.ts
 src/api/posts.ts
@@ -191,6 +160,7 @@ src/api/users.ts
 src/api/votes.ts
 src/App.tsx
 src/components/ActivityHistory.tsx
+src/components/ActivityHistory.tsxold
 src/components/CommentItem.tsx
 src/components/CommentSection.tsx
 src/components/CommunityAbout.tsx
@@ -245,1003 +215,12 @@ Files
 ================================================================
 
 ================
-File: .git_disabled/COMMIT_EDITMSG
-================
-refactor database
-
-================
-File: .git_disabled/config
-================
-[core]
-	repositoryformatversion = 0
-	filemode = false
-	bare = false
-	logallrefupdates = true
-	symlinks = false
-	ignorecase = true
-[remote "origin"]
-	url = https://github.com/sadoway7/p1.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
-[branch "main"]
-	remote = origin
-	merge = refs/heads/main
-[branch "refactor-new-database"]
-	vscode-merge-base = origin/main
-
-================
-File: .git_disabled/description
-================
-Unnamed repository; edit this file 'description' to name the repository.
-
-================
-File: .git_disabled/FETCH_HEAD
-================
-d217b9bb28bfca4cef59daa4e08be63cba121463		branch 'main' of https://github.com/sadoway7/p1
-
-================
-File: .git_disabled/HEAD
-================
-ref: refs/heads/refactor-new-database
-
-================
-File: .git_disabled/hooks/applypatch-msg.sample
-================
-#!/bin/sh
-#
-# An example hook script to check the commit log message taken by
-# applypatch from an e-mail message.
-#
-# The hook should exit with non-zero status after issuing an
-# appropriate message if it wants to stop the commit.  The hook is
-# allowed to edit the commit message file.
-#
-# To enable this hook, rename this file to "applypatch-msg".
-
-. git-sh-setup
-commitmsg="$(git rev-parse --git-path hooks/commit-msg)"
-test -x "$commitmsg" && exec "$commitmsg" ${1+"$@"}
-:
-
-================
-File: .git_disabled/hooks/commit-msg.sample
-================
-#!/bin/sh
-#
-# An example hook script to check the commit log message.
-# Called by "git commit" with one argument, the name of the file
-# that has the commit message.  The hook should exit with non-zero
-# status after issuing an appropriate message if it wants to stop the
-# commit.  The hook is allowed to edit the commit message file.
-#
-# To enable this hook, rename this file to "commit-msg".
-
-# Uncomment the below to add a Signed-off-by line to the message.
-# Doing this in a hook is a bad idea in general, but the prepare-commit-msg
-# hook is more suited to it.
-#
-# SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
-# grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
-
-# This example catches duplicate Signed-off-by lines.
-
-test "" = "$(grep '^Signed-off-by: ' "$1" |
-	 sort | uniq -c | sed -e '/^[ 	]*1[ 	]/d')" || {
-	echo >&2 Duplicate Signed-off-by lines.
-	exit 1
-}
-
-================
-File: .git_disabled/hooks/fsmonitor-watchman.sample
-================
-#!/usr/bin/perl
-
-use strict;
-use warnings;
-use IPC::Open2;
-
-# An example hook script to integrate Watchman
-# (https://facebook.github.io/watchman/) with git to speed up detecting
-# new and modified files.
-#
-# The hook is passed a version (currently 2) and last update token
-# formatted as a string and outputs to stdout a new update token and
-# all files that have been modified since the update token. Paths must
-# be relative to the root of the working tree and separated by a single NUL.
-#
-# To enable this hook, rename this file to "query-watchman" and set
-# 'git config core.fsmonitor .git/hooks/query-watchman'
-#
-my ($version, $last_update_token) = @ARGV;
-
-# Uncomment for debugging
-# print STDERR "$0 $version $last_update_token\n";
-
-# Check the hook interface version
-if ($version ne 2) {
-	die "Unsupported query-fsmonitor hook version '$version'.\n" .
-	    "Falling back to scanning...\n";
-}
-
-my $git_work_tree = get_working_dir();
-
-my $retry = 1;
-
-my $json_pkg;
-eval {
-	require JSON::XS;
-	$json_pkg = "JSON::XS";
-	1;
-} or do {
-	require JSON::PP;
-	$json_pkg = "JSON::PP";
-};
-
-launch_watchman();
-
-sub launch_watchman {
-	my $o = watchman_query();
-	if (is_work_tree_watched($o)) {
-		output_result($o->{clock}, @{$o->{files}});
-	}
-}
-
-sub output_result {
-	my ($clockid, @files) = @_;
-
-	# Uncomment for debugging watchman output
-	# open (my $fh, ">", ".git/watchman-output.out");
-	# binmode $fh, ":utf8";
-	# print $fh "$clockid\n@files\n";
-	# close $fh;
-
-	binmode STDOUT, ":utf8";
-	print $clockid;
-	print "\0";
-	local $, = "\0";
-	print @files;
-}
-
-sub watchman_clock {
-	my $response = qx/watchman clock "$git_work_tree"/;
-	die "Failed to get clock id on '$git_work_tree'.\n" .
-		"Falling back to scanning...\n" if $? != 0;
-
-	return $json_pkg->new->utf8->decode($response);
-}
-
-sub watchman_query {
-	my $pid = open2(\*CHLD_OUT, \*CHLD_IN, 'watchman -j --no-pretty')
-	or die "open2() failed: $!\n" .
-	"Falling back to scanning...\n";
-
-	# In the query expression below we're asking for names of files that
-	# changed since $last_update_token but not from the .git folder.
-	#
-	# To accomplish this, we're using the "since" generator to use the
-	# recency index to select candidate nodes and "fields" to limit the
-	# output to file names only. Then we're using the "expression" term to
-	# further constrain the results.
-	my $last_update_line = "";
-	if (substr($last_update_token, 0, 1) eq "c") {
-		$last_update_token = "\"$last_update_token\"";
-		$last_update_line = qq[\n"since": $last_update_token,];
-	}
-	my $query = <<"	END";
-		["query", "$git_work_tree", {$last_update_line
-			"fields": ["name"],
-			"expression": ["not", ["dirname", ".git"]]
-		}]
-	END
-
-	# Uncomment for debugging the watchman query
-	# open (my $fh, ">", ".git/watchman-query.json");
-	# print $fh $query;
-	# close $fh;
-
-	print CHLD_IN $query;
-	close CHLD_IN;
-	my $response = do {local $/; <CHLD_OUT>};
-
-	# Uncomment for debugging the watch response
-	# open ($fh, ">", ".git/watchman-response.json");
-	# print $fh $response;
-	# close $fh;
-
-	die "Watchman: command returned no output.\n" .
-	"Falling back to scanning...\n" if $response eq "";
-	die "Watchman: command returned invalid output: $response\n" .
-	"Falling back to scanning...\n" unless $response =~ /^\{/;
-
-	return $json_pkg->new->utf8->decode($response);
-}
-
-sub is_work_tree_watched {
-	my ($output) = @_;
-	my $error = $output->{error};
-	if ($retry > 0 and $error and $error =~ m/unable to resolve root .* directory (.*) is not watched/) {
-		$retry--;
-		my $response = qx/watchman watch "$git_work_tree"/;
-		die "Failed to make watchman watch '$git_work_tree'.\n" .
-		    "Falling back to scanning...\n" if $? != 0;
-		$output = $json_pkg->new->utf8->decode($response);
-		$error = $output->{error};
-		die "Watchman: $error.\n" .
-		"Falling back to scanning...\n" if $error;
-
-		# Uncomment for debugging watchman output
-		# open (my $fh, ">", ".git/watchman-output.out");
-		# close $fh;
-
-		# Watchman will always return all files on the first query so
-		# return the fast "everything is dirty" flag to git and do the
-		# Watchman query just to get it over with now so we won't pay
-		# the cost in git to look up each individual file.
-		my $o = watchman_clock();
-		$error = $output->{error};
-
-		die "Watchman: $error.\n" .
-		"Falling back to scanning...\n" if $error;
-
-		output_result($o->{clock}, ("/"));
-		$last_update_token = $o->{clock};
-
-		eval { launch_watchman() };
-		return 0;
-	}
-
-	die "Watchman: $error.\n" .
-	"Falling back to scanning...\n" if $error;
-
-	return 1;
-}
-
-sub get_working_dir {
-	my $working_dir;
-	if ($^O =~ 'msys' || $^O =~ 'cygwin') {
-		$working_dir = Win32::GetCwd();
-		$working_dir =~ tr/\\/\//;
-	} else {
-		require Cwd;
-		$working_dir = Cwd::cwd();
-	}
-
-	return $working_dir;
-}
-
-================
-File: .git_disabled/hooks/post-update.sample
-================
-#!/bin/sh
-#
-# An example hook script to prepare a packed repository for use over
-# dumb transports.
-#
-# To enable this hook, rename this file to "post-update".
-
-exec git update-server-info
-
-================
-File: .git_disabled/hooks/pre-applypatch.sample
-================
-#!/bin/sh
-#
-# An example hook script to verify what is about to be committed
-# by applypatch from an e-mail message.
-#
-# The hook should exit with non-zero status after issuing an
-# appropriate message if it wants to stop the commit.
-#
-# To enable this hook, rename this file to "pre-applypatch".
-
-. git-sh-setup
-precommit="$(git rev-parse --git-path hooks/pre-commit)"
-test -x "$precommit" && exec "$precommit" ${1+"$@"}
-:
-
-================
-File: .git_disabled/hooks/pre-commit.sample
-================
-#!/bin/sh
-#
-# An example hook script to verify what is about to be committed.
-# Called by "git commit" with no arguments.  The hook should
-# exit with non-zero status after issuing an appropriate message if
-# it wants to stop the commit.
-#
-# To enable this hook, rename this file to "pre-commit".
-
-if git rev-parse --verify HEAD >/dev/null 2>&1
-then
-	against=HEAD
-else
-	# Initial commit: diff against an empty tree object
-	against=$(git hash-object -t tree /dev/null)
-fi
-
-# If you want to allow non-ASCII filenames set this variable to true.
-allownonascii=$(git config --type=bool hooks.allownonascii)
-
-# Redirect output to stderr.
-exec 1>&2
-
-# Cross platform projects tend to avoid non-ASCII filenames; prevent
-# them from being added to the repository. We exploit the fact that the
-# printable range starts at the space character and ends with tilde.
-if [ "$allownonascii" != "true" ] &&
-	# Note that the use of brackets around a tr range is ok here, (it's
-	# even required, for portability to Solaris 10's /usr/bin/tr), since
-	# the square bracket bytes happen to fall in the designated range.
-	test $(git diff-index --cached --name-only --diff-filter=A -z $against |
-	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
-then
-	cat <<\EOF
-Error: Attempt to add a non-ASCII file name.
-
-This can cause problems if you want to work with people on other platforms.
-
-To be portable it is advisable to rename the file.
-
-If you know what you are doing you can disable this check using:
-
-  git config hooks.allownonascii true
-EOF
-	exit 1
-fi
-
-# If there are whitespace errors, print the offending file names and fail.
-exec git diff-index --check --cached $against --
-
-================
-File: .git_disabled/hooks/pre-merge-commit.sample
-================
-#!/bin/sh
-#
-# An example hook script to verify what is about to be committed.
-# Called by "git merge" with no arguments.  The hook should
-# exit with non-zero status after issuing an appropriate message to
-# stderr if it wants to stop the merge commit.
-#
-# To enable this hook, rename this file to "pre-merge-commit".
-
-. git-sh-setup
-test -x "$GIT_DIR/hooks/pre-commit" &&
-        exec "$GIT_DIR/hooks/pre-commit"
-:
-
-================
-File: .git_disabled/hooks/pre-push.sample
-================
-#!/bin/sh
-
-# An example hook script to verify what is about to be pushed.  Called by "git
-# push" after it has checked the remote status, but before anything has been
-# pushed.  If this script exits with a non-zero status nothing will be pushed.
-#
-# This hook is called with the following parameters:
-#
-# $1 -- Name of the remote to which the push is being done
-# $2 -- URL to which the push is being done
-#
-# If pushing without using a named remote those arguments will be equal.
-#
-# Information about the commits which are being pushed is supplied as lines to
-# the standard input in the form:
-#
-#   <local ref> <local oid> <remote ref> <remote oid>
-#
-# This sample shows how to prevent push of commits where the log message starts
-# with "WIP" (work in progress).
-
-remote="$1"
-url="$2"
-
-zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
-
-while read local_ref local_oid remote_ref remote_oid
-do
-	if test "$local_oid" = "$zero"
-	then
-		# Handle delete
-		:
-	else
-		if test "$remote_oid" = "$zero"
-		then
-			# New branch, examine all commits
-			range="$local_oid"
-		else
-			# Update to existing branch, examine new commits
-			range="$remote_oid..$local_oid"
-		fi
-
-		# Check for WIP commit
-		commit=$(git rev-list -n 1 --grep '^WIP' "$range")
-		if test -n "$commit"
-		then
-			echo >&2 "Found WIP commit in $local_ref, not pushing"
-			exit 1
-		fi
-	fi
-done
-
-exit 0
-
-================
-File: .git_disabled/hooks/pre-rebase.sample
-================
-#!/bin/sh
-#
-# Copyright (c) 2006, 2008 Junio C Hamano
-#
-# The "pre-rebase" hook is run just before "git rebase" starts doing
-# its job, and can prevent the command from running by exiting with
-# non-zero status.
-#
-# The hook is called with the following parameters:
-#
-# $1 -- the upstream the series was forked from.
-# $2 -- the branch being rebased (or empty when rebasing the current branch).
-#
-# This sample shows how to prevent topic branches that are already
-# merged to 'next' branch from getting rebased, because allowing it
-# would result in rebasing already published history.
-
-publish=next
-basebranch="$1"
-if test "$#" = 2
-then
-	topic="refs/heads/$2"
-else
-	topic=`git symbolic-ref HEAD` ||
-	exit 0 ;# we do not interrupt rebasing detached HEAD
-fi
-
-case "$topic" in
-refs/heads/??/*)
-	;;
-*)
-	exit 0 ;# we do not interrupt others.
-	;;
-esac
-
-# Now we are dealing with a topic branch being rebased
-# on top of master.  Is it OK to rebase it?
-
-# Does the topic really exist?
-git show-ref -q "$topic" || {
-	echo >&2 "No such branch $topic"
-	exit 1
-}
-
-# Is topic fully merged to master?
-not_in_master=`git rev-list --pretty=oneline ^master "$topic"`
-if test -z "$not_in_master"
-then
-	echo >&2 "$topic is fully merged to master; better remove it."
-	exit 1 ;# we could allow it, but there is no point.
-fi
-
-# Is topic ever merged to next?  If so you should not be rebasing it.
-only_next_1=`git rev-list ^master "^$topic" ${publish} | sort`
-only_next_2=`git rev-list ^master           ${publish} | sort`
-if test "$only_next_1" = "$only_next_2"
-then
-	not_in_topic=`git rev-list "^$topic" master`
-	if test -z "$not_in_topic"
-	then
-		echo >&2 "$topic is already up to date with master"
-		exit 1 ;# we could allow it, but there is no point.
-	else
-		exit 0
-	fi
-else
-	not_in_next=`git rev-list --pretty=oneline ^${publish} "$topic"`
-	/usr/bin/perl -e '
-		my $topic = $ARGV[0];
-		my $msg = "* $topic has commits already merged to public branch:\n";
-		my (%not_in_next) = map {
-			/^([0-9a-f]+) /;
-			($1 => 1);
-		} split(/\n/, $ARGV[1]);
-		for my $elem (map {
-				/^([0-9a-f]+) (.*)$/;
-				[$1 => $2];
-			} split(/\n/, $ARGV[2])) {
-			if (!exists $not_in_next{$elem->[0]}) {
-				if ($msg) {
-					print STDERR $msg;
-					undef $msg;
-				}
-				print STDERR " $elem->[1]\n";
-			}
-		}
-	' "$topic" "$not_in_next" "$not_in_master"
-	exit 1
-fi
-
-<<\DOC_END
-
-This sample hook safeguards topic branches that have been
-published from being rewound.
-
-The workflow assumed here is:
-
- * Once a topic branch forks from "master", "master" is never
-   merged into it again (either directly or indirectly).
-
- * Once a topic branch is fully cooked and merged into "master",
-   it is deleted.  If you need to build on top of it to correct
-   earlier mistakes, a new topic branch is created by forking at
-   the tip of the "master".  This is not strictly necessary, but
-   it makes it easier to keep your history simple.
-
- * Whenever you need to test or publish your changes to topic
-   branches, merge them into "next" branch.
-
-The script, being an example, hardcodes the publish branch name
-to be "next", but it is trivial to make it configurable via
-$GIT_DIR/config mechanism.
-
-With this workflow, you would want to know:
-
-(1) ... if a topic branch has ever been merged to "next".  Young
-    topic branches can have stupid mistakes you would rather
-    clean up before publishing, and things that have not been
-    merged into other branches can be easily rebased without
-    affecting other people.  But once it is published, you would
-    not want to rewind it.
-
-(2) ... if a topic branch has been fully merged to "master".
-    Then you can delete it.  More importantly, you should not
-    build on top of it -- other people may already want to
-    change things related to the topic as patches against your
-    "master", so if you need further changes, it is better to
-    fork the topic (perhaps with the same name) afresh from the
-    tip of "master".
-
-Let's look at this example:
-
-		   o---o---o---o---o---o---o---o---o---o "next"
-		  /       /           /           /
-		 /   a---a---b A     /           /
-		/   /               /           /
-	       /   /   c---c---c---c B         /
-	      /   /   /             \         /
-	     /   /   /   b---b C     \       /
-	    /   /   /   /             \     /
-    ---o---o---o---o---o---o---o---o---o---o---o "master"
-
-
-A, B and C are topic branches.
-
- * A has one fix since it was merged up to "next".
-
- * B has finished.  It has been fully merged up to "master" and "next",
-   and is ready to be deleted.
-
- * C has not merged to "next" at all.
-
-We would want to allow C to be rebased, refuse A, and encourage
-B to be deleted.
-
-To compute (1):
-
-	git rev-list ^master ^topic next
-	git rev-list ^master        next
-
-	if these match, topic has not merged in next at all.
-
-To compute (2):
-
-	git rev-list master..topic
-
-	if this is empty, it is fully merged to "master".
-
-DOC_END
-
-================
-File: .git_disabled/hooks/pre-receive.sample
-================
-#!/bin/sh
-#
-# An example hook script to make use of push options.
-# The example simply echoes all push options that start with 'echoback='
-# and rejects all pushes when the "reject" push option is used.
-#
-# To enable this hook, rename this file to "pre-receive".
-
-if test -n "$GIT_PUSH_OPTION_COUNT"
-then
-	i=0
-	while test "$i" -lt "$GIT_PUSH_OPTION_COUNT"
-	do
-		eval "value=\$GIT_PUSH_OPTION_$i"
-		case "$value" in
-		echoback=*)
-			echo "echo from the pre-receive-hook: ${value#*=}" >&2
-			;;
-		reject)
-			exit 1
-		esac
-		i=$((i + 1))
-	done
-fi
-
-================
-File: .git_disabled/hooks/prepare-commit-msg.sample
-================
-#!/bin/sh
-#
-# An example hook script to prepare the commit log message.
-# Called by "git commit" with the name of the file that has the
-# commit message, followed by the description of the commit
-# message's source.  The hook's purpose is to edit the commit
-# message file.  If the hook fails with a non-zero status,
-# the commit is aborted.
-#
-# To enable this hook, rename this file to "prepare-commit-msg".
-
-# This hook includes three examples. The first one removes the
-# "# Please enter the commit message..." help message.
-#
-# The second includes the output of "git diff --name-status -r"
-# into the message, just before the "git status" output.  It is
-# commented because it doesn't cope with --amend or with squashed
-# commits.
-#
-# The third example adds a Signed-off-by line to the message, that can
-# still be edited.  This is rarely a good idea.
-
-COMMIT_MSG_FILE=$1
-COMMIT_SOURCE=$2
-SHA1=$3
-
-/usr/bin/perl -i.bak -ne 'print unless(m/^. Please enter the commit message/..m/^#$/)' "$COMMIT_MSG_FILE"
-
-# case "$COMMIT_SOURCE,$SHA1" in
-#  ,|template,)
-#    /usr/bin/perl -i.bak -pe '
-#       print "\n" . `git diff --cached --name-status -r`
-# 	 if /^#/ && $first++ == 0' "$COMMIT_MSG_FILE" ;;
-#  *) ;;
-# esac
-
-# SOB=$(git var GIT_COMMITTER_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
-# git interpret-trailers --in-place --trailer "$SOB" "$COMMIT_MSG_FILE"
-# if test -z "$COMMIT_SOURCE"
-# then
-#   /usr/bin/perl -i.bak -pe 'print "\n" if !$first_line++' "$COMMIT_MSG_FILE"
-# fi
-
-================
-File: .git_disabled/hooks/push-to-checkout.sample
-================
-#!/bin/sh
-
-# An example hook script to update a checked-out tree on a git push.
-#
-# This hook is invoked by git-receive-pack(1) when it reacts to git
-# push and updates reference(s) in its repository, and when the push
-# tries to update the branch that is currently checked out and the
-# receive.denyCurrentBranch configuration variable is set to
-# updateInstead.
-#
-# By default, such a push is refused if the working tree and the index
-# of the remote repository has any difference from the currently
-# checked out commit; when both the working tree and the index match
-# the current commit, they are updated to match the newly pushed tip
-# of the branch. This hook is to be used to override the default
-# behaviour; however the code below reimplements the default behaviour
-# as a starting point for convenient modification.
-#
-# The hook receives the commit with which the tip of the current
-# branch is going to be updated:
-commit=$1
-
-# It can exit with a non-zero status to refuse the push (when it does
-# so, it must not modify the index or the working tree).
-die () {
-	echo >&2 "$*"
-	exit 1
-}
-
-# Or it can make any necessary changes to the working tree and to the
-# index to bring them to the desired state when the tip of the current
-# branch is updated to the new commit, and exit with a zero status.
-#
-# For example, the hook can simply run git read-tree -u -m HEAD "$1"
-# in order to emulate git fetch that is run in the reverse direction
-# with git push, as the two-tree form of git read-tree -u -m is
-# essentially the same as git switch or git checkout that switches
-# branches while keeping the local changes in the working tree that do
-# not interfere with the difference between the branches.
-
-# The below is a more-or-less exact translation to shell of the C code
-# for the default behaviour for git's push-to-checkout hook defined in
-# the push_to_deploy() function in builtin/receive-pack.c.
-#
-# Note that the hook will be executed from the repository directory,
-# not from the working tree, so if you want to perform operations on
-# the working tree, you will have to adapt your code accordingly, e.g.
-# by adding "cd .." or using relative paths.
-
-if ! git update-index -q --ignore-submodules --refresh
-then
-	die "Up-to-date check failed"
-fi
-
-if ! git diff-files --quiet --ignore-submodules --
-then
-	die "Working directory has unstaged changes"
-fi
-
-# This is a rough translation of:
-#
-#   head_has_history() ? "HEAD" : EMPTY_TREE_SHA1_HEX
-if git cat-file -e HEAD 2>/dev/null
-then
-	head=HEAD
-else
-	head=$(git hash-object -t tree --stdin </dev/null)
-fi
-
-if ! git diff-index --quiet --cached --ignore-submodules $head --
-then
-	die "Working directory has staged changes"
-fi
-
-if ! git read-tree -u -m "$commit"
-then
-	die "Could not update working tree to new HEAD"
-fi
-
-================
-File: .git_disabled/hooks/sendemail-validate.sample
-================
-#!/bin/sh
-
-# An example hook script to validate a patch (and/or patch series) before
-# sending it via email.
-#
-# The hook should exit with non-zero status after issuing an appropriate
-# message if it wants to prevent the email(s) from being sent.
-#
-# To enable this hook, rename this file to "sendemail-validate".
-#
-# By default, it will only check that the patch(es) can be applied on top of
-# the default upstream branch without conflicts in a secondary worktree. After
-# validation (successful or not) of the last patch of a series, the worktree
-# will be deleted.
-#
-# The following config variables can be set to change the default remote and
-# remote ref that are used to apply the patches against:
-#
-#   sendemail.validateRemote (default: origin)
-#   sendemail.validateRemoteRef (default: HEAD)
-#
-# Replace the TODO placeholders with appropriate checks according to your
-# needs.
-
-validate_cover_letter () {
-	file="$1"
-	# TODO: Replace with appropriate checks (e.g. spell checking).
-	true
-}
-
-validate_patch () {
-	file="$1"
-	# Ensure that the patch applies without conflicts.
-	git am -3 "$file" || return
-	# TODO: Replace with appropriate checks for this patch
-	# (e.g. checkpatch.pl).
-	true
-}
-
-validate_series () {
-	# TODO: Replace with appropriate checks for the whole series
-	# (e.g. quick build, coding style checks, etc.).
-	true
-}
-
-# main -------------------------------------------------------------------------
-
-if test "$GIT_SENDEMAIL_FILE_COUNTER" = 1
-then
-	remote=$(git config --default origin --get sendemail.validateRemote) &&
-	ref=$(git config --default HEAD --get sendemail.validateRemoteRef) &&
-	worktree=$(mktemp --tmpdir -d sendemail-validate.XXXXXXX) &&
-	git worktree add -fd --checkout "$worktree" "refs/remotes/$remote/$ref" &&
-	git config --replace-all sendemail.validateWorktree "$worktree"
-else
-	worktree=$(git config --get sendemail.validateWorktree)
-fi || {
-	echo "sendemail-validate: error: failed to prepare worktree" >&2
-	exit 1
-}
-
-unset GIT_DIR GIT_WORK_TREE
-cd "$worktree" &&
-
-if grep -q "^diff --git " "$1"
-then
-	validate_patch "$1"
-else
-	validate_cover_letter "$1"
-fi &&
-
-if test "$GIT_SENDEMAIL_FILE_COUNTER" = "$GIT_SENDEMAIL_FILE_TOTAL"
-then
-	git config --unset-all sendemail.validateWorktree &&
-	trap 'git worktree remove -ff "$worktree"' EXIT &&
-	validate_series
-fi
-
-================
-File: .git_disabled/hooks/update.sample
-================
-#!/bin/sh
-#
-# An example hook script to block unannotated tags from entering.
-# Called by "git receive-pack" with arguments: refname sha1-old sha1-new
-#
-# To enable this hook, rename this file to "update".
-#
-# Config
-# ------
-# hooks.allowunannotated
-#   This boolean sets whether unannotated tags will be allowed into the
-#   repository.  By default they won't be.
-# hooks.allowdeletetag
-#   This boolean sets whether deleting tags will be allowed in the
-#   repository.  By default they won't be.
-# hooks.allowmodifytag
-#   This boolean sets whether a tag may be modified after creation. By default
-#   it won't be.
-# hooks.allowdeletebranch
-#   This boolean sets whether deleting branches will be allowed in the
-#   repository.  By default they won't be.
-# hooks.denycreatebranch
-#   This boolean sets whether remotely creating branches will be denied
-#   in the repository.  By default this is allowed.
-#
-
-# --- Command line
-refname="$1"
-oldrev="$2"
-newrev="$3"
-
-# --- Safety check
-if [ -z "$GIT_DIR" ]; then
-	echo "Don't run this script from the command line." >&2
-	echo " (if you want, you could supply GIT_DIR then run" >&2
-	echo "  $0 <ref> <oldrev> <newrev>)" >&2
-	exit 1
-fi
-
-if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
-	echo "usage: $0 <ref> <oldrev> <newrev>" >&2
-	exit 1
-fi
-
-# --- Config
-allowunannotated=$(git config --type=bool hooks.allowunannotated)
-allowdeletebranch=$(git config --type=bool hooks.allowdeletebranch)
-denycreatebranch=$(git config --type=bool hooks.denycreatebranch)
-allowdeletetag=$(git config --type=bool hooks.allowdeletetag)
-allowmodifytag=$(git config --type=bool hooks.allowmodifytag)
-
-# check for no description
-projectdesc=$(sed -e '1q' "$GIT_DIR/description")
-case "$projectdesc" in
-"Unnamed repository"* | "")
-	echo "*** Project description file hasn't been set" >&2
-	exit 1
-	;;
-esac
-
-# --- Check types
-# if $newrev is 0000...0000, it's a commit to delete a ref.
-zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
-if [ "$newrev" = "$zero" ]; then
-	newrev_type=delete
-else
-	newrev_type=$(git cat-file -t $newrev)
-fi
-
-case "$refname","$newrev_type" in
-	refs/tags/*,commit)
-		# un-annotated tag
-		short_refname=${refname##refs/tags/}
-		if [ "$allowunannotated" != "true" ]; then
-			echo "*** The un-annotated tag, $short_refname, is not allowed in this repository" >&2
-			echo "*** Use 'git tag [ -a | -s ]' for tags you want to propagate." >&2
-			exit 1
-		fi
-		;;
-	refs/tags/*,delete)
-		# delete tag
-		if [ "$allowdeletetag" != "true" ]; then
-			echo "*** Deleting a tag is not allowed in this repository" >&2
-			exit 1
-		fi
-		;;
-	refs/tags/*,tag)
-		# annotated tag
-		if [ "$allowmodifytag" != "true" ] && git rev-parse $refname > /dev/null 2>&1
-		then
-			echo "*** Tag '$refname' already exists." >&2
-			echo "*** Modifying a tag is not allowed in this repository." >&2
-			exit 1
-		fi
-		;;
-	refs/heads/*,commit)
-		# branch
-		if [ "$oldrev" = "$zero" -a "$denycreatebranch" = "true" ]; then
-			echo "*** Creating a branch is not allowed in this repository" >&2
-			exit 1
-		fi
-		;;
-	refs/heads/*,delete)
-		# delete branch
-		if [ "$allowdeletebranch" != "true" ]; then
-			echo "*** Deleting a branch is not allowed in this repository" >&2
-			exit 1
-		fi
-		;;
-	refs/remotes/*,commit)
-		# tracking branch
-		;;
-	refs/remotes/*,delete)
-		# delete tracking branch
-		if [ "$allowdeletebranch" != "true" ]; then
-			echo "*** Deleting a tracking branch is not allowed in this repository" >&2
-			exit 1
-		fi
-		;;
-	*)
-		# Anything else (is there anything else?)
-		echo "*** Update hook: unknown type of update to ref $refname of type $newrev_type" >&2
-		exit 1
-		;;
-esac
-
-# --- Finished
-exit 0
-
-================
-File: .git_disabled/info/exclude
-================
-# git ls-files --others --exclude-from=.git/info/exclude
-# Lines that start with '#' are comments.
-# For a project mostly in C, the following would be a good set of
-# exclude patterns (uncomment them if you want to use them):
-# *.[oa]
-# *~
-
-================
-File: .git_disabled/ORIG_HEAD
-================
-391bc0043748c20342b1ddeb57ed21bef19e7ed0
-
-================
-File: .git_disabled/refs/heads/main
-================
-ad07921a1cedd35dc9c3f0fca4b55c29f1d6a81d
-
-================
-File: .git_disabled/refs/heads/refactor-new-database
-================
-9a67a0ecec7984bf9aed3e43f6dfaa4961af1a34
-
-================
-File: .git_disabled/refs/remotes/origin/main
-================
-391bc0043748c20342b1ddeb57ed21bef19e7ed0
-
-================
 File: .gitignore
 ================
 # Logs
 logs
+ARCHIVED
+.git_disabled
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -1266,908 +245,6 @@ dist-ssr
 *.sw?
 
 ================
-File: API_PLAN.md
-================
-# API Development Plan
-
-This document outlines the plan for developing the API for the application.
-
-## 1. Directory Structure
-
-We will create an `api` directory within the `src` directory to house all API-related code. This will keep the API logic separate from the UI components.
-
-```
-src/
-  api/
-    posts.ts
-    communities.ts
-    users.ts
-    ...
-```
-
-## 2. API Endpoints
-
-Based on the existing TODO comments in the application, we can identify the following potential API endpoints:
-
-- **Posts:**
-    - `/api/posts`: Get all posts (or a list of posts based on certain criteria, including visibility).
-    - `/api/posts/:postId`: Get a specific post by ID.
-    - `/api/posts`: Create a new post (including a `privacy` field: "public" or "private").
-    - `/api/posts/:postId`: Update an existing post (including the `privacy` field).
-    - `/api/posts/:postId`: Delete a post.
-    - `/api/posts/:postId/comments`: Get comments for a specific post.
-    - `/api/posts/:postId/comments`: Create a comment for a post.
-
-- **Communities:**
-    - `/api/communities`: Get all communities.
-    - `/api/communities/:communityId`: Get a specific community by ID.
-    - `/api/communities`: Create a new community.
-    - `/api/communities/:communityId`: Update an existing community.
-    - `/api/communities/:communityId`: Delete a community.
-    - `/api/communities/:communityId/rules`: Get rules for a community.
-    - `/api/communities/:communityId/settings`: Get settings for a community.
-    - `/api/communities/:communityId/about`: Get "about" information for a community.
-    - `/api/user/communities`: Get communities for the logged-in user.
-
-- **Users:**
-    - `/api/users/:userId/posts`: Get posts for a specific user.
-
-## 3. API Structure
-
-We will create separate files for each resource within the `api` directory (e.g., `posts.ts`, `communities.ts`, `users.ts`). Each file will contain functions for interacting with that resource's API endpoints.
-
-## 4. Technology
-
-- **Frontend:** We will use the standard `fetch` API for making requests from the React components.
-- **Backend:** We will create a separate repository for the backend and use Express.js to build the API server. This allows for independent scaling and deployment of the API. The user has also mentioned having a MariaDB setup, which we can use.
-
-## 5. Initial API Functions (Example - posts.ts)
-
-```typescript
-// src/api/posts.ts
-
-export async function getPosts(visibility?: 'public' | 'private') {
-  // Fetch posts from the API.  If visibility is specified, filter accordingly.
-  // If no visibility is specified, the backend might default to public posts,
-  // or return both public and private posts depending on user authentication/authorization.
-}
-
-export async function getPost(postId: string) {
-  // Fetch a specific post by ID
-}
-
-export async function createPost(postData: { title: string, content: string, privacy: 'public' | 'private' }) {
-  // Create a new post, including privacy setting
-}
-
-export async function updatePost(postId: string, postData: { title?: string, content?: string, privacy?: 'public' | 'private' }) {
-  // Update an existing post, including privacy setting
-}
-
-export async function deletePost(postId: string) {
-  // Delete a post
-}
-
-export async function getComments(postId: string){
-    // Fetch comments for a specific post
-}
-```
-
-Similar functions would be created for other resources (communities, users).
-
-## 6. Missing Features and Considerations
-
-The current plan covers basic CRUD operations for posts, communities, and users. However, a fully featured social website typically includes many other features, such as:
-
--   **User Authentication/Authorization:** Login, registration, profile management, password reset, etc.
--   **Friend/Follower System:**  The ability for users to connect with each other.
--   **Real-time Features:** Notifications, chat, live updates.
--   **Liking/Voting:**  Upvoting/downvoting or liking posts and comments.
--   **Searching:**  Ability to search for users, communities, and posts.
--   **Content Moderation:**  Reporting and blocking users/content.
--   **User Roles/Permissions:**  Different levels of access (e.g., admin, moderator, regular user).
--   **Media Uploads:**  Support for image and video uploads.
--   **Groups/Sub-communities:**  Nested communities within communities.
--   **Recommendations:**  Suggested communities, users, or content.
--   **Profiles:** User profiles with customizable information.
-
-## 7. Iterative Approach
-
-Building a social website is a complex undertaking. It's best to adopt an iterative approach:
-
-1.  **Start with Core Functionality:** Implement the basic features outlined in sections 2 and 5 above. This provides a foundation to build upon.
-2.  **Prioritize Additional Features:**  Based on user feedback and project goals, prioritize the additional features listed in section 6.
-3.  **Iterate and Expand:**  Add features incrementally, testing and refining as you go.
-
-What features do you consider the highest priority for the initial version of the API?
-
-## 8. Next Steps
-- User approval of this plan.
-- Switch to "Code" mode to implement.
-- Create a new directory `src/api`.
-- Create the files `posts.ts`, `communities.ts`, and `users.ts` inside `src/api`.
-- Implement the basic API functions using `fetch`.
-- Set up a separate backend repository with Express.js.
-
-================
-File: ARCHIVED/backend/api/comments.js
-================
-dotenv.config();
-const pool = mariadb.createPool({
-  port: Number(process.env.DB_PORT),
-const getPostComments = async (postId) => {
-    conn = await pool.getConnection();
-    const comments = await conn.query(`
-    console.error("Error fetching post comments:", error);
-    if (conn) conn.release();
-const getComment = async (commentId) => {
-    const [comment] = await conn.query(`
-    console.error("Error fetching comment:", error);
-const createComment = async (userId, commentData) => {
-    const [post] = await conn.query(
-      throw new Error('Post not found');
-      const [parentComment] = await conn.query(
-        throw new Error('Parent comment not found');
-    const id = uuidv4();
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      values.push(parent_comment_id);
-    await conn.query(query, values);
-    const [newComment] = await conn.query(`
-    console.error("Error creating comment:", error);
-const updateComment = async (commentId, userId, content) => {
-    const [comment] = await conn.query(
-      throw new Error('You can only update your own comments');
-    await conn.query(
-    const [updatedComment] = await conn.query(`
-    console.error("Error updating comment:", error);
-const deleteComment = async (commentId, userId) => {
-      throw new Error('You can only delete your own comments');
-    await conn.beginTransaction();
-      const findReplies = async (parentId, replyIds = []) => {
-        const replies = await conn.query(
-          replyIds.push(reply.id);
-          await findReplies(reply.id, replyIds);
-      const replyIds = await findReplies(commentId);
-        const placeholders = replyIds.map(() => '?').join(',');
-      await conn.commit();
-      await conn.rollback();
-    console.error("Error deleting comment:", error);
-const getCommentReplies = async (commentId) => {
-    const replies = await conn.query(`
-    console.error("Error fetching comment replies:", error);
-const getThreadedComments = async (postId) => {
-    const commentsWithReplies = comments.map(comment => ({
-    const commentMap = new Map();
-    commentsWithReplies.forEach(comment => {
-      commentMap.set(comment.id, comment);
-        const parent = commentMap.get(comment.parent_comment_id);
-          parent.replies.push(comment);
-          rootComments.push(comment);
-    console.error("Error fetching threaded comments:", error);
-
-================
-File: ARCHIVED/backend/api/communities.js
-================
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
-const pool = mariadb.createPool({
-  port: Number(process.env.DB_PORT),
-const getCommunities = async () => {
-    conn = await pool.getConnection();
-    const communities = await conn.query("SELECT * FROM community");
-    console.error("Error fetching communities:", error);
-    throw new Error('Failed to fetch communities');
-    if (conn) conn.end();
-const getCommunity = async (communityId) => {
-    const [community] = await conn.query(
-    console.error("Error fetching community:", error);
-    throw new Error('Failed to fetch community');
-const createCommunity = async (communityData) => {
-    const id = uuidv4();
-    await conn.beginTransaction();
-    await conn.query(
-      const activityId = uuidv4();
-    await conn.commit();
-    const [newCommunity] = await conn.query("SELECT * FROM community WHERE id = ?", [id]);
-    console.error("Error creating community:", error);
-      await conn.rollback();
-    throw new Error('Failed to create community');
-const updateCommunity = async (communityId, communityData, userId) => {
-      updates.push("name = ?");
-      values.push(name);
-      updates.push("description = ?");
-      values.push(description);
-      updates.push("privacy = ?");
-      values.push(privacy);
-      updates.push("icon_url = ?");
-      values.push(icon_url);
-      updates.push("banner_url = ?");
-      values.push(banner_url);
-      updates.push("theme_color = ?");
-      values.push(theme_color);
-      return await getCommunity(communityId);
-    values.push(communityId);
-      `UPDATE community SET ${updates.join(", ")}, updated_at = NOW() WHERE id = ?`,
-    console.error("Error updating community:", error);
-    throw new Error('Failed to update community');
-const deleteCommunity = async (communityId, userId) => {
-    await conn.query("DELETE FROM community_setting WHERE community_id = ?", [communityId]);
-    await conn.query("DELETE FROM community_rule WHERE community_id = ?", [communityId]);
-    await conn.query("DELETE FROM community_member WHERE community_id = ?", [communityId]);
-    await conn.query("DELETE FROM community_join_request WHERE community_id = ?", [communityId]);
-        JSON.stringify({ community_id: communityId })
-    const result = await conn.query("DELETE FROM community WHERE id = ?", [communityId]);
-    console.error("Error deleting community:", error);
-    throw new Error('Failed to delete community');
-const getCommunityRules = async (communityId) => {
-    const rules = await conn.query(
-    console.error("Error fetching community rules:", error);
-    throw new Error('Failed to fetch community rules');
-const addCommunityRule = async (communityId, ruleData, userId) => {
-    const [positionResult] = await conn.query(
-    const [newRule] = await conn.query(
-    console.error("Error adding community rule:", error);
-    throw new Error('Failed to add community rule');
-const updateCommunityRule = async (ruleId, ruleData, userId) => {
-      updates.push("title = ?");
-      values.push(title);
-      updates.push("position = ?");
-      values.push(position);
-      const [rule] = await conn.query(
-    values.push(ruleId);
-      `UPDATE community_rule SET ${updates.join(", ")}, updated_at = NOW() WHERE id = ?`,
-    const [updatedRule] = await conn.query(
-    console.error("Error updating community rule:", error);
-    throw new Error('Failed to update community rule');
-const deleteCommunityRule = async (ruleId, userId) => {
-        JSON.stringify({ community_id: rule.community_id })
-    const result = await conn.query(
-    console.error("Error deleting community rule:", error);
-    throw new Error('Failed to delete community rule');
-const getCommunitySettings = async (communityId) => {
-    const [settings] = await conn.query(
-      const [newSettings] = await conn.query(
-    console.error("Error fetching community settings:", error);
-    throw new Error('Failed to fetch community settings');
-const updateCommunitySettings = async (communityId, settingsData, userId) => {
-    const [existingSettings] = await conn.query(
-        updates.push("allow_post_images = ?");
-        values.push(allow_post_images);
-        updates.push("allow_post_links = ?");
-        values.push(allow_post_links);
-        updates.push("allow_post_videos = ?");
-        values.push(allow_post_videos);
-        updates.push("allow_polls = ?");
-        values.push(allow_polls);
-        updates.push("require_post_flair = ?");
-        values.push(require_post_flair);
-        updates.push("show_in_discovery = ?");
-        values.push(show_in_discovery);
-        updates.push("join_method = ?");
-        values.push(join_method);
-        updates.push("content_filter_level = ?");
-        values.push(content_filter_level);
-          `UPDATE community_setting SET ${updates.join(", ")}, updated_at = NOW() WHERE community_id = ?`,
-    const [updatedSettings] = await conn.query(
-    console.error("Error updating community settings:", error);
-    throw new Error('Failed to update community settings');
-const getCommunityMembers = async (communityId) => {
-    const members = await conn.query(
-    console.error("Error fetching community members:", error);
-    throw new Error('Failed to fetch community members');
-const getCommunityMember = async (communityId, userId) => {
-    console.log(`Fetching community member: communityId=${communityId}, userId=${userId}`);
-    const [member] = await conn.query(
-    console.log("Query result:", member);
-    console.error("Error fetching community member:", error);
-    throw new Error('Failed to fetch community member');
-const addCommunityMember = async (communityId, userId, role = 'member') => {
-    const [existingMember] = await conn.query(
-    const [newMember] = await conn.query(
-    console.error("Error adding community member:", error);
-    throw new Error('Failed to add community member');
-const updateCommunityMemberRole = async (communityId, userId, role, updatedBy) => {
-        JSON.stringify({ 
-    const [updatedMember] = await conn.query(
-    console.error("Error updating community member role:", error);
-    throw new Error('Failed to update community member role');
-const removeCommunityMember = async (communityId, userId) => {
-    console.error("Error removing community member:", error);
-    throw new Error('Failed to remove community member');
-const getJoinRequests = async (communityId, status) => {
-      params.push(status);
-    const requests = await conn.query(query, params);
-    console.error("Error fetching join requests:", error);
-    throw new Error('Failed to fetch join requests');
-const getJoinRequest = async (requestId) => {
-    const [request] = await conn.query(
-    console.error("Error fetching join request:", error);
-    throw new Error('Failed to fetch join request');
-const createJoinRequest = async (communityId, userId) => {
-    const [existingRequest] = await conn.query(
-    const [newRequest] = await conn.query(
-    console.error("Error creating join request:", error);
-    throw new Error('Failed to create join request');
-
-================
-File: ARCHIVED/backend/api/moderation.ts
-================
-export interface ModeratorPermission {
-    created_at: Date;
-    updated_at: Date;
-export interface ModeratorPermissionInput {
-export interface ExtendedCommunitySettings {
-export interface ExtendedCommunitySettingsInput {
-export interface PostModeration {
-export interface ModerationLog {
-export interface BannedUser {
-export async function isUserModerator(communityId: string, userId: string): Promise<boolean> {
-        throw new Error('Failed to check moderator status');
-export async function hasModeratorPermission(
-        throw new Error(`Failed to check moderator permission: ${permission}`);
-export async function getModeratorPermissions(communityId: string, userId: string): Promise<ModeratorPermission | null> {
-        throw new Error('Failed to fetch moderator permissions');
-export async function setModeratorPermissions(
-    permissions: ModeratorPermissionInput
-            throw new Error('User is not a moderator or admin of this community');
-        throw new Error('Failed to set moderator permissions');
-export async function getEnhancedCommunitySettings(communityId: string): Promise<ExtendedCommunitySettings | null> {
-        throw new Error('Failed to fetch enhanced community settings');
-export async function updateEnhancedCommunitySettings(
-    settings: ExtendedCommunitySettingsInput
-        throw new Error('Failed to update enhanced community settings');
-export async function getPostModerationStatus(postId: string): Promise<PostModeration | null> {
-        throw new Error('Failed to fetch post moderation status');
-export async function addPostToModQueue(postId: string): Promise<PostModeration> {
-        throw new Error('Failed to add post to moderation queue');
-export async function moderatePost(
-            throw new Error('Post not found');
-        throw new Error('Failed to moderate post');
-export async function getPendingModQueue(communityId: string): Promise<any[]> {
-        throw new Error('Failed to fetch pending moderation queue');
-export async function createModerationLog(
-        throw new Error('Failed to create moderation log');
-export async function getModerationLogs(communityId: string, limit = 50, offset = 0): Promise<ModerationLog[]> {
-        throw new Error('Failed to fetch moderation logs');
-export async function banUserFromCommunity(
-            const expirationDate = new Date();
-        throw new Error('Failed to ban user from community');
-export async function unbanUserFromCommunity(
-        throw new Error('Failed to unban user from community');
-export async function getBannedUsers(communityId: string): Promise<any[]> {
-        throw new Error('Failed to fetch banned users');
-export async function isUserBanned(communityId: string, userId: string): Promise<boolean> {
-        throw new Error('Failed to check if user is banned');
-
-================
-File: ARCHIVED/backend/api/posts.js
-================
-dotenv.config();
-const pool = mariadb.createPool({
-  port: Number(process.env.DB_PORT),
-const getPosts = async (req, res) => {
-    conn = await pool.getConnection();
-      queryParams.push(communityId);
-    const posts = await conn.query(query, queryParams);
-    const formattedPosts = posts.map(post => ({
-    res.status(200).json(formattedPosts);
-    console.error("Error fetching posts:", error);
-    res.status(500).json({ message: 'Error fetching posts' });
-    if (conn) conn.release();
-const getPost = async (req, res) => {
-    const [post] = await conn.query(`
-      return res.status(404).json({ message: 'Post not found' });
-    res.status(200).json(formattedPost);
-    console.error("Error fetching post:", error);
-    res.status(500).json({ message: 'Error fetching post' });
-const createPost = async (req, res) => {
-      return res.status(400).json({ message: 'Title, content, and communityId are required' });
-    const [community] = await conn.query(
-      return res.status(404).json({ message: 'Community not found' });
-    const id = uuidv4();
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    await conn.query(
-    const [newPost] = await conn.query(`
-    res.status(201).json(formattedPost);
-    console.error("Error creating post:", error);
-    res.status(500).json({ message: 'Error creating post' });
-const updatePost = async (req, res) => {
-    const [post] = await conn.query(
-      return res.status(403).json({ message: 'You can only update your own posts' });
-    const [updatedPost] = await conn.query(`
-    console.error("Error updating post:", error);
-    res.status(500).json({ message: 'Error updating post' });
-const deletePost = async (req, res) => {
-      return res.status(403).json({ message: 'You can only delete your own posts' });
-    await conn.beginTransaction();
-      await conn.commit();
-      res.status(204).send();
-      await conn.rollback();
-    console.error("Error deleting post:", error);
-    res.status(500).json({ message: 'Error deleting post' });
-const getCommunityPosts = async (req, res) => {
-    const posts = await conn.query(`
-    console.error("Error fetching community posts:", error);
-    res.status(500).json({ message: 'Error fetching community posts' });
-const canPostInCommunity = async (req, res, next) => {
-      return next();
-    const [membership] = await conn.query(
-      return res.status(403).json({ message: 'You must be a member to post in this community' });
-    next();
-    console.error("Error checking post permission:", error);
-    return res.status(500).json({ message: 'Error checking post permission' });
-
-================
-File: ARCHIVED/backend/api/votes.js
-================
-dotenv.config();
-const pool = mariadb.createPool({
-  port: Number(process.env.DB_PORT),
-async function voteOnPost(userId, postId, value) {
-    throw new Error('Vote value must be 1, -1, or 0');
-    conn = await pool.getConnection();
-    const [post] = await conn.query('SELECT * FROM posts WHERE id = ?', [postId]);
-      throw new Error('Post not found');
-    const [existingVote] = await conn.query(
-        await conn.query(
-    console.error('Error voting on post:', error);
-    if (conn) conn.end();
-async function voteOnComment(userId, commentId, value) {
-    const [comment] = await conn.query('SELECT * FROM comments WHERE id = ?', [commentId]);
-      throw new Error('Comment not found');
-    console.error('Error voting on comment:', error);
-async function getUserPostVote(userId, postId) {
-    const [vote] = await conn.query(
-    console.error('Error getting user post vote:', error);
-async function getUserCommentVote(userId, commentId) {
-    console.error('Error getting user comment vote:', error);
-async function getPostVoteCounts(postId) {
-    const [result] = await conn.query(
-    console.error('Error getting post vote counts:', error);
-async function getCommentVoteCounts(commentId) {
-    console.error('Error getting comment vote counts:', error);
-function includePostVotesInQuery(baseQuery) {
-function includeCommentVotesInQuery(baseQuery) {
-
-================
-File: ARCHIVED/backend/middleware/moderation.js
-================
-const isCommunityModerator = async (req, res, next) => {
-      return res.status(400).json({ error: 'Community ID is required' });
-    const isModerator = await isUserModerator(communityId, userId);
-      return res.status(403).json({ error: 'Only moderators can perform this action' });
-    next();
-    console.error('Error in moderator check middleware:', error);
-    return res.status(500).json({ error: 'Server error checking moderator status' });
-const hasPermission = (permission) => {
-      const hasPermission = await hasModeratorPermission(communityId, userId, permission);
-        return res.status(403).json({ error: 'You do not have permission to perform this action' });
-      console.error(`Error in permission check middleware (${permission}):`, error);
-      return res.status(500).json({ error: 'Server error checking permissions' });
-const checkNotBanned = async (req, res, next) => {
-    const isBanned = await isUserBanned(communityId, userId);
-      return res.status(403).json({ error: 'You are banned from this community' });
-    console.error('Error in ban check middleware:', error);
-    return res.status(500).json({ error: 'Server error checking ban status' });
-
-================
-File: ARCHIVED/backend/routes/comments.js
-================
-const router = express.Router();
-router.get('/posts/:postId', async (req, res) => {
-            const threadedComments = await comments.getThreadedComments(postId);
-            res.json(threadedComments);
-            const allComments = await comments.getPostComments(postId);
-            res.json(allComments);
-        console.error("Error fetching comments:", error);
-        res.status(500).json({ error: 'Failed to fetch comments' });
-router.get('/:commentId', async (req, res) => {
-        const comment = await comments.getComment(commentId);
-            return res.status(404).json({ error: 'Comment not found' });
-        res.json(comment);
-        console.error("Error fetching comment:", error);
-        res.status(500).json({ error: 'Failed to fetch comment' });
-router.post('/posts/:postId', async (req, res) => {
-        const newComment = await comments.createComment(userId, commentData);
-        res.status(201).json(newComment);
-        console.error("Error creating comment:", error);
-        res.status(500).json({ error: 'Failed to create comment' });
-router.put('/:commentId', async (req, res) => {
-        const updatedComment = await comments.updateComment(commentId, userId, content);
-        res.json(updatedComment);
-        console.error("Error updating comment:", error);
-            return res.status(403).json({ error: error.message });
-        res.status(500).json({ error: 'Failed to update comment' });
-router.delete('/:commentId', async (req, res) => {
-        const success = await comments.deleteComment(commentId, userId);
-        res.status(204).end();
-        console.error("Error deleting comment:", error);
-        res.status(500).json({ error: 'Failed to delete comment' });
-router.get('/:commentId/replies', async (req, res) => {
-        const replies = await comments.getCommentReplies(commentId);
-        res.json(replies);
-        console.error("Error fetching comment replies:", error);
-        res.status(500).json({ error: 'Failed to fetch comment replies' });
-
-================
-File: ARCHIVED/backend/routes/communities.js
-================
-const router = express.Router();
-dotenv.config();
-const pool = mariadb.createPool({
-    port: Number(process.env.DB_PORT),
-const isCommunityModerator = async (req, res, next) => {
-        conn = await pool.getConnection();
-        const [membership] = await conn.query(
-            return res.status(403).json({ error: 'Moderator access required' });
-        next();
-        console.error("Error checking moderator status:", error);
-        return res.status(500).json({ error: 'Failed to check moderator status' });
-        if (conn) conn.end();
-const canViewCommunity = async (req, res, next) => {
-        const [community] = await conn.query(
-            return res.status(404).json({ error: 'Community not found' });
-            return next();
-            return res.status(401).json({ error: 'Authentication required' });
-            return res.status(403).json({ error: 'Membership required' });
-        console.error("Error checking community access:", error);
-        return res.status(500).json({ error: 'Failed to check community access' });
-router.get('/', async (req, res) => {
-            const communitiesList = await communities.searchCommunities(searchTerm);
-            res.json(communitiesList);
-            const allCommunities = await communities.getCommunities();
-            res.json(allCommunities);
-        console.error("Error fetching communities:", error);
-        res.status(500).json({ error: 'Failed to fetch communities' });
-router.get('/:id', canViewCommunity, async (req, res) => {
-        const community = await communities.getCommunity(id);
-        res.json(community);
-        console.error("Error fetching community:", error);
-        res.status(500).json({ error: 'Failed to fetch community' });
-router.post('/', async (req, res) => {
-        const newCommunity = await communities.createCommunity({ name, description, privacy });
-        await communities.addCommunityMember(newCommunity.id, userId, 'moderator');
-        res.status(201).json(newCommunity);
-        console.error("Error creating community:", error);
-        res.status(500).json({ error: 'Failed to create community' });
-router.put('/:id', isCommunityModerator, async (req, res) => {
-        const updatedCommunity = await communities.updateCommunity(id, { name, description, privacy });
-        res.json(updatedCommunity);
-        console.error("Error updating community:", error);
-        res.status(500).json({ error: 'Failed to update community' });
-router.delete('/:id', isCommunityModerator, async (req, res) => {
-        const success = await communities.deleteCommunity(id);
-        res.status(204).end();
-        console.error("Error deleting community:", error);
-        res.status(500).json({ error: 'Failed to delete community' });
-router.get('/:id/rules', canViewCommunity, async (req, res) => {
-        const rules = await communities.getCommunityRules(id);
-        res.json(rules);
-        console.error("Error fetching community rules:", error);
-        res.status(500).json({ error: 'Failed to fetch community rules' });
-router.post('/:id/rules', isCommunityModerator, async (req, res) => {
-        const newRule = await communities.addCommunityRule(id, { title, description });
-        res.status(201).json(newRule);
-        console.error("Error adding community rule:", error);
-        res.status(500).json({ error: 'Failed to add community rule' });
-router.put('/:id/rules/:ruleId', isCommunityModerator, async (req, res) => {
-        const updatedRule = await communities.updateCommunityRule(ruleId, { title, description });
-            return res.status(404).json({ error: 'Rule not found' });
-        res.json(updatedRule);
-        console.error("Error updating community rule:", error);
-        res.status(500).json({ error: 'Failed to update community rule' });
-router.delete('/:id/rules/:ruleId', isCommunityModerator, async (req, res) => {
-        const success = await communities.deleteCommunityRule(ruleId);
-        console.error("Error deleting community rule:", error);
-        res.status(500).json({ error: 'Failed to delete community rule' });
-router.get('/:id/settings', canViewCommunity, async (req, res) => {
-        const settings = await communities.getCommunitySettings(id);
-            return res.status(404).json({ error: 'Settings not found' });
-        res.json(settings);
-        console.error("Error fetching community settings:", error);
-        res.status(500).json({ error: 'Failed to fetch community settings' });
-router.put('/:id/settings', isCommunityModerator, async (req, res) => {
-        const updatedSettings = await communities.updateCommunitySettings(id, { 
-        res.json(updatedSettings);
-        console.error("Error updating community settings:", error);
-        res.status(500).json({ error: 'Failed to update community settings' });
-router.get('/:id/members', canViewCommunity, async (req, res) => {
-        const members = await communities.getCommunityMembers(id);
-        res.json(members);
-        console.error("Error fetching community members:", error);
-        res.status(500).json({ error: 'Failed to fetch community members' });
-router.get('/:id/members/:userId', async (req, res) => {
-    console.log(`GET request for member: community ${id}, user ${userId}`);
-        res.json({ community_id: id, user_id: userId, role: 'member', joined_at: new Date().toISOString() });
-        console.error("Error fetching community member:", error);
-        res.status(500).json({ error: 'Failed to fetch community member' });
-router.post('/:id/members', async (req, res) => {
-    console.log(`POST request for member: community ${id}, user ${userId}`);
-        console.log("Community settings:", settings);
-                console.log("Auto-approving join request");
-                const newMember = await communities.addCommunityMember(id, userId, 'member');
-                return res.status(201).json(newMember);
-                console.log("Creating pending join request");
-                const joinRequest = await communities.createJoinRequest(id, userId);
-                return res.status(202).json({
-                console.log("Rejecting invite-only join request");
-                return res.status(403).json({ error: 'This community is invite-only' });
-                console.log("Using fallback auto-approve method");
-                const fallbackMember = await communities.addCommunityMember(id, userId, 'member');
-                return res.status(201).json(fallbackMember);
-        console.error("Error joining community:", error);
-        res.status(500).json({ error: 'Failed to join community' });
-router.put('/:id/members/:userId', isCommunityModerator, async (req, res) => {
-        const updatedMember = await communities.updateCommunityMemberRole(id, userId, role);
-            return res.status(404).json({ error: 'Member not found' });
-        res.json(updatedMember);
-        console.error("Error updating community member role:", error);
-        res.status(500).json({ error: 'Failed to update community member role' });
-router.delete('/:id/members', async (req, res) => {
-    console.log(`DELETE request for current user to leave: community ${id}, user ${currentUserId}`);
-        console.log(`Removing member ${currentUserId} from community ${id}`);
-        const success = await communities.removeCommunityMember(id, currentUserId);
-        console.log(`Successfully removed member ${currentUserId} from community ${id}`);
-        console.error("Error removing community member:", error);
-        res.status(500).json({ error: 'Failed to remove community member' });
-router.delete('/:id/members/:userId', async (req, res) => {
-    console.log(`DELETE request for specific member: community ${id}, target user ${userId}, current user ${currentUserId}`);
-                return res.status(403).json({ error: 'You can only remove yourself unless you are a moderator' });
-        console.log(`Removing member ${userId} from community ${id}`);
-        const success = await communities.removeCommunityMember(id, userId);
-        console.log(`Successfully removed member ${userId} from community ${id}`);
-router.get('/:id/join-requests', isCommunityModerator, async (req, res) => {
-        const requests = await communities.getPendingJoinRequests(id);
-        res.json(requests);
-        console.error("Error fetching join requests:", error);
-        res.status(500).json({ error: 'Failed to fetch join requests' });
-router.post('/:id/join-requests/:requestId/approve', isCommunityModerator, async (req, res) => {
-        const success = await communities.approveJoinRequest(requestId);
-            return res.status(404).json({ error: 'Join request not found' });
-        res.status(200).json({ message: 'Join request approved' });
-        console.error("Error approving join request:", error);
-        res.status(500).json({ error: 'Failed to approve join request' });
-router.post('/:id/join-requests/:requestId/reject', isCommunityModerator, async (req, res) => {
-        const success = await communities.rejectJoinRequest(requestId);
-        res.status(200).json({ message: 'Join request rejected' });
-        console.error("Error rejecting join request:", error);
-        res.status(500).json({ error: 'Failed to reject join request' });
-router.get('/:id/about', canViewCommunity, async (req, res) => {
-        const about = await communities.getCommunityAbout(id);
-        res.json(about);
-        console.error("Error fetching community about:", error);
-        res.status(500).json({ error: 'Failed to fetch community about' });
-router.get('/users/:id', async (req, res) => {
-        const userCommunities = await communities.getUserCommunities(id);
-        res.json(userCommunities);
-        console.error("Error fetching user communities:", error);
-        res.status(500).json({ error: 'Failed to fetch user communities' });
-
-================
-File: ARCHIVED/backend/routes/moderation.js
-================
-const router = express.Router();
-router.use(authenticateToken);
-router.get('/communities/:communityId/moderator-permissions/:userId', 
-      const permissions = await getModeratorPermissions(communityId, userId);
-      res.json(permissions || { message: 'No specific permissions found' });
-      console.error('Error fetching moderator permissions:', error);
-      res.status(500).json({ error: 'Failed to fetch moderator permissions' });
-router.post('/communities/:communityId/moderator-permissions/:userId', 
-  hasPermission('can_manage_members'),
-      const updatedPermissions = await setModeratorPermissions(communityId, userId, permissions);
-      res.json(updatedPermissions);
-      console.error('Error setting moderator permissions:', error);
-      res.status(500).json({ error: 'Failed to set moderator permissions' });
-router.get('/communities/:communityId/settings', 
-      const settings = await getEnhancedCommunitySettings(communityId);
-      res.json(settings);
-      console.error('Error fetching community settings:', error);
-      res.status(500).json({ error: 'Failed to fetch community settings' });
-router.put('/communities/:communityId/settings', 
-  hasPermission('can_manage_settings'),
-      const updatedSettings = await updateEnhancedCommunitySettings(communityId, settings);
-      res.json(updatedSettings);
-      console.error('Error updating community settings:', error);
-      res.status(500).json({ error: 'Failed to update community settings' });
-router.get('/communities/:communityId/mod-queue', 
-  hasPermission('can_manage_posts'),
-      const pendingPosts = await getPendingModQueue(communityId);
-      res.json(pendingPosts);
-      console.error('Error fetching moderation queue:', error);
-      res.status(500).json({ error: 'Failed to fetch moderation queue' });
-router.post('/posts/:postId/moderate', 
-      const communityId = await getCommunityIdFromPost(postId);
-        return res.status(404).json({ error: 'Post not found' });
-      const canManagePosts = await hasModeratorPermission(communityId, userId, 'can_manage_posts');
-        return res.status(403).json({ error: 'You do not have permission to moderate posts' });
-        return res.status(400).json({ error: 'Invalid action. Must be "approve" or "reject"' });
-      const result = await moderatePost(postId, userId, action, reason);
-      res.json(result);
-      console.error('Error moderating post:', error);
-      res.status(500).json({ error: 'Failed to moderate post' });
-router.get('/communities/:communityId/logs', 
-      const logs = await getModerationLogs(communityId, parseInt(limit), parseInt(offset));
-      res.json(logs);
-      console.error('Error fetching moderation logs:', error);
-      res.status(500).json({ error: 'Failed to fetch moderation logs' });
-router.get('/communities/:communityId/banned-users', 
-      const bannedUsers = await getBannedUsers(communityId);
-      res.json(bannedUsers);
-      console.error('Error fetching banned users:', error);
-      res.status(500).json({ error: 'Failed to fetch banned users' });
-router.post('/communities/:communityId/ban/:userId', 
-      const ban = await banUserFromCommunity(communityId, userId, bannedBy, reason, duration);
-      res.json(ban);
-      console.error('Error banning user:', error);
-      res.status(500).json({ error: 'Failed to ban user' });
-router.post('/communities/:communityId/unban/:userId', 
-      const result = await unbanUserFromCommunity(communityId, userId, unbannedBy, reason);
-        res.json({ message: 'User has been unbanned' });
-        res.status(404).json({ message: 'User was not banned' });
-      console.error('Error unbanning user:', error);
-      res.status(500).json({ error: 'Failed to unban user' });
-router.post('/communities/:communityId/members/:userId', 
-      if (!['member', 'moderator', 'admin'].includes(role)) {
-        return res.status(400).json({ error: 'Invalid role. Must be "member", "moderator", or "admin"' });
-      const member = await addCommunityMember(communityId, userId, role);
-        await setModeratorPermissions(communityId, userId, {
-      res.json(member);
-      console.error('Error adding community member:', error);
-      res.status(500).json({ error: 'Failed to add community member' });
-router.put('/communities/:communityId/members/:userId', 
-      const member = await updateCommunityMemberRole(communityId, userId, role);
-      console.error('Error updating community member role:', error);
-      res.status(500).json({ error: 'Failed to update community member role' });
-
-================
-File: ARCHIVED/backend/routes/posts.js
-================
-const router = express.Router();
-dotenv.config();
-const pool = mariadb.createPool({
-    port: Number(process.env.DB_PORT),
-const canPostInCommunity = async (req, res, next) => {
-        return next(); // Profile post, no community check needed
-        conn = await pool.getConnection();
-        const [membership] = await conn.query(
-            return res.status(403).json({ error: 'You must be a member of this community to post' });
-        next();
-        console.error("Error checking community membership:", error);
-        return res.status(500).json({ error: 'Failed to check community membership' });
-        if (conn) conn.end();
-router.get('/', async (req, res) => {
-            params.push(communityId);
-            params.push(userProfileId, userProfileId);
-        const posts = await conn.query(query, params);
-        res.json(posts);
-        console.error("Error fetching posts:", error);
-        res.status(500).json({ error: 'Failed to fetch posts' });
-router.get('/:id', async (req, res) => {
-        const [post] = await conn.query("SELECT * FROM posts WHERE id = ?", [id]);
-            return res.status(404).json({ error: 'Post not found' });
-        res.json(post);
-        console.error("Error fetching post:", error);
-        res.status(500).json({ error: 'Failed to fetch post' });
-router.post('/', canPostInCommunity, async (req, res) => {
-            params.push(communityId, profilePost);
-            params.push(userProfileId, profilePost);
-            params.push(profilePost);
-        const result = await conn.query(query, params);
-        const [newPost] = await conn.query("SELECT * FROM posts WHERE id = ?", [result.insertId]);
-        res.status(201).json(newPost);
-        console.error("Error creating post:", error);
-        res.status(500).json({ error: 'Failed to create post' });
-router.put('/:id', async (req, res) => {
-            return res.status(403).json({ error: 'You can only edit your own posts' });
-        await conn.query(
-        const [updatedPost] = await conn.query("SELECT * FROM posts WHERE id = ?", [id]);
-        res.json(updatedPost);
-        console.error("Error updating post:", error);
-        res.status(500).json({ error: 'Failed to update post' });
-router.delete('/:id', async (req, res) => {
-                return res.status(403).json({ error: 'You can only delete your own posts or posts in communities you moderate' });
-        await conn.query("DELETE FROM posts WHERE id = ?", [id]);
-        res.status(204).end();
-        console.error("Error deleting post:", error);
-        res.status(500).json({ error: 'Failed to delete post' });
-
-================
-File: ARCHIVED/backend/routes/users.js
-================
-const router = express.Router();
-router.get('/', async (req, res) => {
-    const connection = await pool.getConnection();
-      const [rows] = await connection.execute(
-      const users = rows.map(user => {
-      res.json(users);
-      connection.release();
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Internal server error' });
-router.get('/:userId', async (req, res) => {
-        return res.status(404).json({ error: 'User not found' });
-      res.json(user);
-    console.error('Error fetching user:', error);
-router.put('/profile', authenticateToken, async (req, res) => {
-      return res.status(400).json({ error: 'Username and email are required' });
-      const [existingUsers] = await connection.execute(
-        return res.status(400).json({ error: 'Username is already taken' });
-      await connection.execute(
-    console.error('Error updating user profile:', error);
-router.get('/:userId/statistics', async (req, res) => {
-      res.json(rows[0]);
-    console.error('Error fetching user statistics:', error);
-router.get('/:userId/friends', async (req, res) => {
-      res.json(rows);
-    console.error('Error fetching user friends:', error);
-router.get('/lookup/:username', async (req, res) => {
-      res.json({ id: rows[0].id });
-    console.error('Error looking up user:', error);
-router.get('/:userId/communities', async (req, res) => {
-    console.error('Error fetching user communities:', error);
-
-================
-File: ARCHIVED/backend/routes/votes.js
-================
-const router = express.Router();
-router.post('/posts/:postId', authenticateToken, async (req, res) => {
-    const result = await voteOnPost(userId, postId, value);
-    res.json(result);
-    console.error('Error voting on post:', error);
-    res.status(400).json({ error: error.message });
-router.post('/comments/:commentId', authenticateToken, async (req, res) => {
-    const result = await voteOnComment(userId, commentId, value);
-    console.error('Error voting on comment:', error);
-router.get('/posts/:postId/user', authenticateToken, async (req, res) => {
-    const value = await getUserPostVote(userId, postId);
-    res.json({ value });
-    console.error('Error getting user post vote:', error);
-router.get('/comments/:commentId/user', authenticateToken, async (req, res) => {
-    const value = await getUserCommentVote(userId, commentId);
-    console.error('Error getting user comment vote:', error);
-
-================
-File: ARCHIVED/README.md
-================
-# ARCHIVED Files
-
-This directory contains files that were part of the original codebase but are no longer in use after the database refactoring.
-
-## Purpose
-
-These files are kept for reference purposes only and **should not be used or imported** in the active codebase. They represent the pre-refactoring state of the application and may contain references to the old database schema.
-
-## Directory Structure
-
-The directory structure mirrors the main project structure to make it easier to locate the original versions of files:
-
-```
-/ARCHIVED/
-  /backend/
-    /api/       # Backend API files
-    /db/        # Database-related files
-    /routes/    # Express route handlers
-    /middleware/# Express middleware
-  /src/
-    /api/       # Frontend API client files
-    /components/# React components
-    /pages/     # React page components
-    /context/   # React context providers
-```
-
-## When to Reference These Files
-
-You might need to reference these files when:
-- Debugging issues related to the database refactoring
-- Understanding the original data flow
-- Recovering functionality that was accidentally lost during refactoring
-
-However, any code copied from these files should be adapted to work with the new database schema.
-
-## Archiving Date
-
-These files were archived on February 26, 2025 as part of the database refactoring project.
-
-================
 File: backend/.env
 ================
 API_KEY=AIzaSyCqBgYt00ik2BzpxDKz2b6aNHK6yt2cdeE
@@ -2190,6 +267,20 @@ DB_NAME=rumfor1
 JWT_SECRET=rumfor-secret-key-for-jwt-authentication
 
 ================
+File: backend/activity-handler.js
+================
+const router = express.Router();
+require('dotenv').config();
+const pool = mysql.createPool({
+  port: Number(process.env.DB_PORT),
+router.get('/community/:communityId', async (req, res) => {
+    const limit = parseInt(req.query.limit || '10', 10);
+    const offset = parseInt(req.query.offset || '0', 10);
+    res.json([]);
+    console.error('Error fetching community activities:', error);
+    res.status(500).json({ error: 'Failed to fetch community activities' });
+
+================
 File: backend/api/activity.js
 ================
 async function getUserActivities(userId, options = {}) {
@@ -2201,7 +292,10 @@ async function getUserActivities(userId, options = {}) {
       queryParams.push(endDate);
     queryParams.push(parseInt(limit), parseInt(offset));
     const activities = await conn.query(query, queryParams);
-        const entityDetails = await getEntityDetails(conn, activity.entity_id, activity.entity_type);
+    if (Array.isArray(activities)) {
+            const entityDetails = await getEntityDetails(conn, activity.entity_id, activity.entity_type);
+            console.error(`Error fetching details for ${activity.entity_type}:${activity.entity_id}`, detailsError);
+      console.warn("Expected activities array but received:", typeof activities);
     console.error("Error fetching user activities:", error);
     if (conn) conn.release();
 async function getCommunityActivities(communityId, options = {}) {
@@ -2216,12 +310,15 @@ async function getActionTypes() {
     const actionTypes = await conn.query(
     console.error("Error fetching action types:", error);
 async function logActivity(activityData) {
+    console.warn("Attempted to log activity without user ID:", activityData);
     const [activityTypeRecord] = await conn.query(
-      throw new Error(`Activity type '${activityType}' not found`);
+      console.warn(`Activity type '${activityType}' not found, creating it.`);
+      const activityTypeId = uuidv4();
+      await conn.query(
     const [actionTypeRecord] = await conn.query(
-      throw new Error(`Action type '${actionType}' not found`);
+      console.warn(`Action type '${actionType}' not found, creating it.`);
+      const actionTypeId = uuidv4();
     const activityId = uuidv4();
-    await conn.query(
         metadata ? JSON.stringify(metadata) : null,
     const [activity] = await conn.query(
     console.error("Error logging activity:", error);
@@ -2235,15 +332,14 @@ async function getEntityDetails(conn, entityId, entityType) {
 ================
 File: backend/api/activity.ts
 ================
+interface ActivityRow {
 export async function getUserActivities(userId: string, options: ActivityOptions = {}): Promise<Activity[]> {
 export async function getCommunityActivities(communityId: string, options: ActivityOptions = {}): Promise<Activity[]> {
 export async function getPostActivities(postId: string, options: ActivityOptions = {}): Promise<Activity[]> {
 export async function getActivityTypes(): Promise<ActivityType[]> {
 export async function getActionTypes(): Promise<ActionType[]> {
-export async function logActivity(activityData: ActivityData): Promise<Activity> {
-      throw new Error(`Activity type '${activityType}' not found`);
-      throw new Error(`Action type '${actionType}' not found`);
-async function getEntityDetails(conn: any, entityId: string, entityType: string): Promise<any> {
+export async function logActivity(activityData: ActivityData): Promise<Activity | null> {
+async function getEntityDetails(conn: any, entityId: string, entityType: string): Promise<any | null> {
 
 ================
 File: backend/api/auth.js
@@ -2258,23 +354,31 @@ const register = async (userData) => {
       throw new Error('Password must be at least 8 characters and include uppercase, lowercase, number, and special character');
     conn = await pool.getConnection();
     await conn.beginTransaction();
-    const [existingUser] = await conn.query(
-      throw new Error('Username or email already exists');
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
-    const id = uuidv4();
-    const now = new Date();
-    await conn.query(
-    await conn.commit();
-    const [newUser] = await conn.query(
-      await logActivity({
-      console.error("Error logging registration activity:", error);
-        await conn.rollback();
-        console.error("Error rolling back transaction:", rollbackError);
+      const [existingUsers] = await conn.query(
+      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+        if (existingUsers.some(user => user.username === username)) {
+          throw new Error('Username already exists');
+        if (existingUsers.some(user => user.email === email)) {
+          throw new Error('Email already exists');
+        throw new Error('Username or email already exists');
+      const salt = await bcrypt.genSalt(10);
+      const password_hash = await bcrypt.hash(password, salt);
+      const id = uuidv4();
+      const now = new Date();
+      await conn.query(
+      await conn.commit();
+      const [results] = await conn.query(
+      const newUser = Array.isArray(results) && results.length > 0 ? results[0] : null;
+        throw new Error('Failed to retrieve created user');
+      logActivity({
+      }).catch(error => {
+        console.error("Error logging registration activity:", error);
+      await conn.rollback();
     console.error("Error registering user:", error);
     if (conn) conn.release();
 const login = async (credentials) => {
-    const [user] = await conn.query(
+    const [users] = await conn.query(
+    const user = Array.isArray(users) && users.length > 0 ? users[0] : null;
       throw new Error('Invalid username or password');
     const isMatch = await bcrypt.compare(password, user.password_hash);
       [new Date(), user.id]
@@ -2289,6 +393,7 @@ const verifyToken = (token) => {
     return jwt.verify(token, JWT_SECRET);
     throw new Error('Invalid token');
 const logout = async (userId) => {
+    await logActivity({
     console.error("Error logging out:", error);
 
 ================
@@ -4855,6 +2960,7 @@ export async function updateCommunitySettings(communityId: string, settingsData:
 export async function getCommunityMembers(communityId: string): Promise<CommunityMember[]> {
         throw new Error('Failed to fetch community members');
 export async function addCommunityMember(communityId: string, userId: string, role: 'member' | 'moderator' | 'admin' = 'member'): Promise<CommunityMember> {
+            joined_at: new Date()
         throw new Error('Failed to add community member');
 export async function updateCommunityMemberRole(communityId: string, userId: string, role: 'member' | 'moderator' | 'admin', updatedBy: string): Promise<CommunityMember | null> {
         throw new Error('Failed to update community member role');
@@ -4864,21 +2970,17 @@ export async function getCommunityMember(communityId: string, userId: string): P
         throw new Error('Failed to fetch community member');
 export async function getJoinRequests(communityId: string, status?: 'pending' | 'approved' | 'rejected'): Promise<JoinRequest[]> {
         throw new Error('Failed to fetch join requests');
-export async function getJoinRequest(requestId: string): Promise<JoinRequest | null> {
-        throw new Error('Failed to fetch join request');
 export async function createJoinRequest(communityId: string, userId: string): Promise<JoinRequest> {
-        throw new Error('Failed to create join request');
-export async function updateJoinRequestStatus(
+            throw new Error('User is already a member of this community');
+            throw new Error('Join request already exists');
+export async function updateJoinRequest(requestId: string, status: 'approved' | 'rejected', moderatorId: string): Promise<JoinRequest | null> {
         throw new Error('Failed to update join request');
-export async function deleteJoinRequest(requestId: string, userId: string): Promise<boolean> {
-        throw new Error('Failed to delete join request');
-export async function getUserJoinRequests(userId: string, status?: 'pending' | 'approved' | 'rejected'): Promise<JoinRequest[]> {
-        throw new Error('Failed to fetch user join requests');
-export async function getCommunityAbout(communityId: string): Promise<any> {
+export async function getCommunityAbout(communityId: string): Promise<any | null> {
+        const creationDate = new Date(community.created_at);
         throw new Error('Failed to fetch community about');
 export async function getUserCommunities(userId: string): Promise<Community[]> {
         throw new Error('Failed to fetch user communities');
-export async function searchCommunities(searchTerm: string): Promise<Community[]> {
+export async function searchCommunities(query: string): Promise<Community[]> {
         throw new Error('Failed to search communities');
 
 ================
@@ -6424,52 +4526,43 @@ All functions include proper error handling and will throw descriptive error mes
 ================
 File: backend/api/moderation.ts
 ================
-export interface ModeratorPermission {
-    created_at: Date;
-    updated_at: Date;
-export interface ModeratorPermissionInput {
-export interface ExtendedCommunitySettings {
-export interface ExtendedCommunitySettingsInput {
-export interface PostModeration {
-export interface ModerationLog {
-export interface BannedUser {
-export async function isUserModerator(communityId: string, userId: string): Promise<boolean> {
-        throw new Error('Failed to check moderator status');
-export async function hasModeratorPermission(
-        throw new Error(`Failed to check moderator permission: ${permission}`);
-export async function getModeratorPermissions(communityId: string, userId: string): Promise<ModeratorPermission | null> {
-        throw new Error('Failed to fetch moderator permissions');
-export async function setModeratorPermissions(
-    permissions: ModeratorPermissionInput
-            throw new Error('User is not a moderator or admin of this community');
-        throw new Error('Failed to set moderator permissions');
-export async function getEnhancedCommunitySettings(communityId: string): Promise<ExtendedCommunitySettings | null> {
-        throw new Error('Failed to fetch enhanced community settings');
-export async function updateEnhancedCommunitySettings(
-    settings: ExtendedCommunitySettingsInput
-        throw new Error('Failed to update enhanced community settings');
-export async function getPostModerationStatus(postId: string): Promise<PostModeration | null> {
-        throw new Error('Failed to fetch post moderation status');
-export async function addPostToModQueue(postId: string): Promise<PostModeration> {
-        throw new Error('Failed to add post to moderation queue');
-export async function moderatePost(
-            throw new Error('Post not found');
-        throw new Error('Failed to moderate post');
-export async function getPendingModQueue(communityId: string): Promise<any[]> {
-        throw new Error('Failed to fetch pending moderation queue');
-export async function createModerationLog(
-        throw new Error('Failed to create moderation log');
-export async function getModerationLogs(communityId: string, limit = 50, offset = 0): Promise<ModerationLog[]> {
-        throw new Error('Failed to fetch moderation logs');
-export async function banUserFromCommunity(
-            const expirationDate = new Date();
-        throw new Error('Failed to ban user from community');
-export async function unbanUserFromCommunity(
-        throw new Error('Failed to unban user from community');
-export async function getBannedUsers(communityId: string): Promise<any[]> {
-        throw new Error('Failed to fetch banned users');
-export async function isUserBanned(communityId: string, userId: string): Promise<boolean> {
-        throw new Error('Failed to check if user is banned');
+export interface ModeratorPermission {
+    created_at: Date;
+    updated_at: Date;
+export interface ModeratorPermissionInput {
+export interface ExtendedCommunitySettings {
+export interface ExtendedCommunitySettingsInput {
+export interface PostModeration {
+export interface ModerationLog {
+export interface BannedUser {
+interface ModeratorPermissionRow extends RowDataPacket, ModeratorPermission {}
+interface CommunitySettingsRow extends RowDataPacket, ExtendedCommunitySettings {}
+interface PostModerationRow extends RowDataPacket, PostModeration {}
+interface ModerationLogRow extends RowDataPacket, ModerationLog {}
+interface BannedUserRow extends RowDataPacket, BannedUser {}
+interface UserRow extends RowDataPacket {
+export async function isModerator(userId: string, communityId: string): Promise<boolean> {
+export async function hasModeratorPermission(
+export async function getModeratorPermissions(
+export async function updateModeratorPermissions(
+    permissions: ModeratorPermissionInput
+            throw new Error('User is not a moderator of this community');
+        const now = new Date();
+export async function getCommunitySettings(communityId: string): Promise<ExtendedCommunitySettings | null> {
+export async function updateCommunitySettings(
+    settings: ExtendedCommunitySettingsInput,
+export async function getPostModerationStatus(postId: string): Promise<PostModeration | null> {
+export async function updatePostModerationStatus(
+                    throw new Error("Failed to retrieve updated post moderation status");
+                    throw new Error("Failed to retrieve created post moderation status");
+export async function logModerationAction(
+            throw new Error("Failed to retrieve created moderation log");
+export async function getModerationLogs(
+export async function banUserFromCommunity(
+                throw new Error("Failed to retrieve ban record");
+export async function isUserBanned(userId: string, communityId: string): Promise<boolean> {
+export async function unbanUserFromCommunity(
+                throw new Error('User is not banned from this community');
 
 ================
 File: backend/api/moderation.ts.new
@@ -8364,6 +6457,60 @@ export function includePostVotesInQuery(baseQuery: string): string {
 export function includeCommentVotesInQuery(baseQuery: string): string {
 
 ================
+File: backend/check-community.js
+================
+require('dotenv').config();
+async function run() {
+    const connection = await mysql.createConnection({
+      const [community] = await connection.query('SELECT * FROM community WHERE id = ?', [communityId]);
+      console.log('Community found:', community.length > 0);
+        console.log('Community details:', community[0]);
+      console.error('Error accessing community:', err.message);
+      const [members] = await connection.query('SELECT * FROM community_member WHERE community_id = ?', [communityId]);
+      console.log('\nCommunity members found:', members.length);
+        console.log('Sample member:', members[0]);
+      console.error('Error accessing community members:', err.message);
+      const [rules] = await connection.query('SELECT * FROM community_rule WHERE community_id = ?', [communityId]);
+      console.log('\nCommunity rules found:', rules.length);
+        console.log('Sample rule:', rules[0]);
+      console.error('Error accessing community rules:', err.message);
+      const [settings] = await connection.query('SELECT * FROM community_setting WHERE community_id = ?', [communityId]);
+      console.log('\nCommunity settings found:', settings.length);
+        console.log('Settings:', settings[0]);
+      console.error('Error accessing community settings:', err.message);
+      const [posts] = await connection.query('SELECT * FROM post WHERE community_id = ? LIMIT 5', [communityId]);
+      console.log('\nPosts found:', posts.length);
+        console.log('Sample post:', { 
+      console.error('Error accessing posts:', err.message);
+    await connection.end();
+    console.error('Database error:', err);
+run();
+
+================
+File: backend/check-tables.js
+================
+require('dotenv').config();
+async function run() {
+    const connection = await mysql.createConnection({
+    console.log(`Connected to database: ${process.env.DB_NAME} on ${process.env.DB_HOST}`);
+    const [tables] = await connection.query('SHOW TABLES');
+    console.log('Tables in the database:');
+    tables.forEach(row => {
+      const tableName = Object.values(row)[0];
+      console.log(tableName);
+        [communities] = await connection.query('SELECT id, name FROM community LIMIT 5');
+        console.log("\nUsing singular 'community' table name");
+        [communities] = await connection.query('SELECT id, name FROM communities LIMIT 5');
+        console.log("\nUsing plural 'communities' table name");
+      console.log('Sample community data:');
+      communities.forEach(community => {
+        console.log(`ID: ${community.id}, Name: ${community.name}`);
+      console.error('Error accessing community data:', err.message);
+    await connection.end();
+    console.error('Database error:', err);
+run();
+
+================
 File: backend/db/add_admin_user.js
 ================
 async function executeQuery(connection, query, params = []) {
@@ -8704,7 +6851,25 @@ declare const pool: Pool;
 File: backend/db/connection.js
 ================
 require('dotenv').config();
-const pool = mysql.createPool({
+function createConnectionPool() {
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+  const pool = mysql.createPool(dbConfig);
+  pool.getConnection()
+    .then(conn => {
+      console.log(`Connected to MySQL database: ${dbConfig.database} on ${dbConfig.host}:${dbConfig.port}`);
+      conn.release();
+    .catch(err => {
+      console.error('Error connecting to database:', err.message);
+      console.error('Please check your database connection settings in the .env file.');
+        console.error('Connection refused. Make sure the database server is running and accessible.');
+        console.error('Access denied. Check your database username and password.');
+        console.error(`Database '${dbConfig.database}' does not exist. Run the database setup scripts first.`);
+const pool = createConnectionPool();
+
+================
+File: backend/db/connection.ts
+================
+function createConnectionPool() {
 
 ================
 File: backend/db/fetch_usernames.js
@@ -11217,6 +9382,71 @@ fixModeratorUsernames()
   .finally(() => process.exit());
 
 ================
+File: backend/fix-table-names.js
+================
+const indexPath = path.join(__dirname, 'index.ts');
+let content = fs.readFileSync(indexPath, 'utf8');
+content = content.replace(/FROM communities WHERE/g, 'FROM community WHERE');
+content = content.replace(/FROM community_members WHERE/g, 'FROM community_member WHERE');
+content = content.replace(/FROM posts WHERE/g, 'FROM post WHERE');
+content = content.replace(/FROM comments WHERE/g, 'FROM comment WHERE');
+content = content.replace(/FROM users WHERE/g, 'FROM user WHERE');
+content = content.replace(/FROM votes WHERE/g, 'FROM vote WHERE');
+content = content.replace(/INSERT INTO communities/g, 'INSERT INTO community');
+content = content.replace(/INSERT INTO community_members/g, 'INSERT INTO community_member');
+content = content.replace(/INSERT INTO posts/g, 'INSERT INTO post');
+content = content.replace(/INSERT INTO comments/g, 'INSERT INTO comment');
+content = content.replace(/INSERT INTO users/g, 'INSERT INTO user');
+content = content.replace(/INSERT INTO votes/g, 'INSERT INTO vote');
+content = content.replace(/UPDATE communities/g, 'UPDATE community');
+content = content.replace(/UPDATE community_members/g, 'UPDATE community_member');
+content = content.replace(/UPDATE posts/g, 'UPDATE post');
+content = content.replace(/UPDATE comments/g, 'UPDATE comment');
+content = content.replace(/UPDATE users/g, 'UPDATE user');
+content = content.replace(/UPDATE votes/g, 'UPDATE vote');
+content = content.replace(/DELETE FROM communities/g, 'DELETE FROM community');
+content = content.replace(/DELETE FROM community_members/g, 'DELETE FROM community_member');
+content = content.replace(/DELETE FROM posts/g, 'DELETE FROM post');
+content = content.replace(/DELETE FROM comments/g, 'DELETE FROM comment');
+content = content.replace(/DELETE FROM users/g, 'DELETE FROM user');
+content = content.replace(/DELETE FROM votes/g, 'DELETE FROM vote');
+fs.writeFileSync(indexPath, content, 'utf8');
+console.log('Updated table names from plural to singular in index.ts');
+const routesDir = path.join(__dirname, 'routes');
+const routeFiles = fs.readdirSync(routesDir);
+routeFiles.forEach(file => {
+  if (file.endsWith('.js')) {
+    const filePath = path.join(routesDir, file);
+    let routeContent = fs.readFileSync(filePath, 'utf8');
+    routeContent = routeContent.replace(/FROM communities/g, 'FROM community');
+    routeContent = routeContent.replace(/FROM community_members/g, 'FROM community_member');
+    routeContent = routeContent.replace(/FROM posts/g, 'FROM post');
+    routeContent = routeContent.replace(/FROM comments/g, 'FROM comment');
+    routeContent = routeContent.replace(/FROM users/g, 'FROM user');
+    routeContent = routeContent.replace(/FROM votes/g, 'FROM vote');
+    routeContent = routeContent.replace(/INSERT INTO communities/g, 'INSERT INTO community');
+    routeContent = routeContent.replace(/INSERT INTO community_members/g, 'INSERT INTO community_member');
+    routeContent = routeContent.replace(/INSERT INTO posts/g, 'INSERT INTO post');
+    routeContent = routeContent.replace(/INSERT INTO comments/g, 'INSERT INTO comment');
+    routeContent = routeContent.replace(/INSERT INTO users/g, 'INSERT INTO user');
+    routeContent = routeContent.replace(/INSERT INTO votes/g, 'INSERT INTO vote');
+    routeContent = routeContent.replace(/UPDATE communities/g, 'UPDATE community');
+    routeContent = routeContent.replace(/UPDATE community_members/g, 'UPDATE community_member');
+    routeContent = routeContent.replace(/UPDATE posts/g, 'UPDATE post');
+    routeContent = routeContent.replace(/UPDATE comments/g, 'UPDATE comment');
+    routeContent = routeContent.replace(/UPDATE users/g, 'UPDATE user');
+    routeContent = routeContent.replace(/UPDATE votes/g, 'UPDATE vote');
+    routeContent = routeContent.replace(/DELETE FROM communities/g, 'DELETE FROM community');
+    routeContent = routeContent.replace(/DELETE FROM community_members/g, 'DELETE FROM community_member');
+    routeContent = routeContent.replace(/DELETE FROM posts/g, 'DELETE FROM post');
+    routeContent = routeContent.replace(/DELETE FROM comments/g, 'DELETE FROM comment');
+    routeContent = routeContent.replace(/DELETE FROM users/g, 'DELETE FROM user');
+    routeContent = routeContent.replace(/DELETE FROM votes/g, 'DELETE FROM vote');
+    fs.writeFileSync(filePath, routeContent, 'utf8');
+    console.log(`Updated table names in routes/${file}`);
+console.log('Database table name corrections completed');
+
+================
 File: backend/index.js
 ================
 dotenv.config();
@@ -11228,9 +9458,13 @@ const authenticateOptional = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
     next();
     const user = require('./api/auth').verifyToken(token);
+    console.error('Token validation error:', error.message);
+const errorHandler = (err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(statusCode).json({
 app.use('/api/auth/login', logUserLogin);
 app.use('/api/auth/register', logUserRegistration);
-app.use('/api/auth/logout', logUserLogout);
+app.use('/api/auth/logout', authenticateOptional, logUserLogout);
 app.use('/api/auth', authRoutes.router);
 app.use('/api/communities', authenticateOptional, communitiesRoutes.router);
 app.use('/api/posts', authenticateOptional, postsRoutes.router);
@@ -11240,67 +9474,74 @@ app.use('/api/votes', authenticateOptional, votesRoutes);
 app.use('/api/activity', authenticateToken, activityRoutes);
 app.get('/', (req, res) => {
   res.send('Hello from Express backend!');
+app.use(errorHandler);
+app.use((req, res) => {
+  res.status(404).json({
 app.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 
 ================
 File: backend/index.ts
 ================
-interface AuthRequest extends Request {
-const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
-const isCommunityModerator = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-const canViewCommunity = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-const canPostInCommunity = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-app.post('/api/auth/register', async (req: Request, res: Response): Promise<void> => {
-app.post('/api/auth/login', async (req: Request, res: Response): Promise<void> => {
-app.get('/api/auth/me', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.get('/api/communities', async (req: Request, res: Response): Promise<void> => {
-app.get('/api/communities/:id', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
-app.post('/api/communities', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.put('/api/communities/:id', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
-app.delete('/api/communities/:id', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
-app.get('/api/communities/:id/rules', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
-app.post('/api/communities/:id/rules', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
-app.put('/api/communities/:id/rules/:ruleId', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
-app.delete('/api/communities/:id/rules/:ruleId', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
-app.get('/api/communities/:id/settings', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
-app.put('/api/communities/:id/settings', authenticateToken, isCommunityModerator, async (req: Request, res: Response) => {
-app.get('/api/communities/:id/members', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
-app.post('/api/communities/:id/members', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.put('/api/communities/:id/members/:userId', authenticateToken, isCommunityModerator, async (req: Request, res: Response) => {
-app.delete('/api/communities/:id/members/:userId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.get('/api/communities/:id/about', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
-app.get('/api/users/:id/communities', async (req: Request, res: Response): Promise<void> => {
-app.get('/api/posts', async (req: Request, res: Response): Promise<void> => {
-app.get('/api/posts/:id', async (req: Request, res: Response): Promise<void> => {
-app.post('/api/posts', authenticateToken, canPostInCommunity, async (req: AuthRequest, res: Response): Promise<void> => {
-app.put('/api/posts/:id', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.delete('/api/posts/:id', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.get('/', (req: Request, res: Response): void => {
-app.get('/api/posts/:postId/comments', async (req: Request, res: Response): Promise<void> => {
-app.get('/api/comments/:commentId', async (req: Request, res: Response): Promise<void> => {
-app.post('/api/posts/:postId/comments', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.put('/api/comments/:commentId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.delete('/api/comments/:commentId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-app.get('/api/comments/:commentId/replies', async (req: Request, res: Response): Promise<void> => {
+interface AuthRequest extends Request {
+const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
+const isCommunityModerator = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+const canViewCommunity = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+const canPostInCommunity = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+app.post('/api/auth/register', async (req: Request, res: Response): Promise<void> => {
+app.post('/api/auth/login', async (req: Request, res: Response): Promise<void> => {
+app.get('/api/auth/me', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.get('/api/communities', async (req: Request, res: Response): Promise<void> => {
+app.get('/api/communities/:id', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
+app.post('/api/communities', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.put('/api/communities/:id', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
+app.delete('/api/communities/:id', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
+app.get('/api/communities/:id/rules', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
+app.post('/api/communities/:id/rules', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
+app.put('/api/communities/:id/rules/:ruleId', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
+app.delete('/api/communities/:id/rules/:ruleId', authenticateToken, isCommunityModerator, async (req: AuthRequest, res: Response): Promise<void> => {
+app.get('/api/communities/:id/settings', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
+app.put('/api/communities/:id/settings', authenticateToken, isCommunityModerator, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+app.get('/api/communities/:id/members', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
+app.post('/api/communities/:id/members', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.put('/api/communities/:id/members/:userId', authenticateToken, isCommunityModerator, async (req: Request, res: Response): Promise<void> => {
+app.delete('/api/communities/:id/members/:userId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.get('/api/communities/:id/about', canViewCommunity, async (req: Request, res: Response): Promise<void> => {
+app.get('/api/users/:id/communities', async (req: Request, res: Response): Promise<void> => {
+app.get('/api/posts', async (req: Request, res: Response): Promise<void> => {
+app.get('/api/posts/:id', async (req: Request, res: Response): Promise<void> => {
+app.post('/api/posts', authenticateToken, canPostInCommunity, async (req: AuthRequest, res: Response): Promise<void> => {
+app.put('/api/posts/:id', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.delete('/api/posts/:id', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.get('/', (req: Request, res: Response): void => {
+app.get('/api/posts/:postId/comments', async (req: Request, res: Response): Promise<void> => {
+app.get('/api/comments/:commentId', async (req: Request, res: Response): Promise<void> => {
+app.post('/api/posts/:postId/comments', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.put('/api/comments/:commentId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.delete('/api/comments/:commentId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+app.get('/api/comments/:commentId/replies', async (req: Request, res: Response): Promise<void> => {
 
 ================
 File: backend/middleware/activity.js
 ================
 function logActivityMiddleware(activityType, actionType, getEntityInfo) {
-            const { entityId, entityType, metadata } = getEntityInfo(req, res);
-            await logActivity({
-          console.error('Error logging activity:', error);
-      return originalEnd.call(this, chunk, encoding);
+        return originalEnd.call(this, chunk, encoding);
+              entityInfo = getEntityInfo(req, res) || entityInfo;
+              console.error('Error extracting entity info:', entityError);
+            logActivity({
+            }).catch(error => {
+              console.error('Error logging activity:', error);
+          console.error('Error in activity middleware:', error);
     next();
 function logUserLogin(req, res, next) {
-          responseBody = JSON.parse(chunk.toString());
-        console.error('Error logging login activity:', error);
+            const responseBody = JSON.parse(chunk.toString());
+            console.error('Error parsing response body:', parseError);
+            console.error('Error logging login activity:', error);
+        console.error('Error in login activity middleware:', error);
 function logUserRegistration(req, res, next) {
-        console.error('Error logging registration activity:', error);
+            console.error('Error logging registration activity:', error);
+        console.error('Error in registration activity middleware:', error);
 function logUserLogout(req, res, next) {
-    logActivity({
-    }).catch(error => {
       console.error('Error logging logout activity:', error);
     create: (req) => ({
     update: (req) => ({
@@ -13217,6 +11458,83 @@ router.get('/user', authenticateToken, async (req, res) => {
 module.exports = router;
 
 ================
+File: backend/test-api.js
+================
+require('dotenv').config();
+const app = express();
+app.use(express.json());
+app.use(cors());
+const createConnection = async () => {
+  return mysql.createConnection({
+app.get('/', (req, res) => {
+  res.json({ status: 'API is running' });
+app.get('/api/communities', async (req, res) => {
+    const conn = await createConnection();
+    const [communities] = await conn.query('SELECT * FROM community');
+    await conn.end();
+    res.json(communities);
+    console.error('Error fetching communities:', error);
+    res.status(500).json({ error: 'Failed to fetch communities' });
+app.get('/api/communities/:id', async (req, res) => {
+    const [communities] = await conn.query('SELECT * FROM community WHERE id = ?', [id]);
+      return res.status(404).json({ error: 'Community not found' });
+    res.json(communities[0]);
+    console.error('Error fetching community:', error);
+    res.status(500).json({ error: 'Failed to fetch community' });
+app.get('/api/communities/:id/members', async (req, res) => {
+    const [members] = await conn.query(
+    res.json(members);
+    console.error('Error fetching community members:', error);
+    res.status(500).json({ error: 'Failed to fetch community members' });
+app.get('/api/communities/:id/rules', async (req, res) => {
+    const [rules] = await conn.query('SELECT * FROM community_rule WHERE community_id = ?', [id]);
+    res.json(rules);
+    console.error('Error fetching community rules:', error);
+    res.status(500).json({ error: 'Failed to fetch community rules' });
+app.get('/api/communities/:id/settings', async (req, res) => {
+    const [settings] = await conn.query('SELECT * FROM community_setting WHERE community_id = ?', [id]);
+      return res.status(404).json({ error: 'Settings not found' });
+    res.json(settings[0]);
+    console.error('Error fetching community settings:', error);
+    res.status(500).json({ error: 'Failed to fetch community settings' });
+app.get('/api/posts', async (req, res) => {
+      return res.status(400).json({ error: 'Community ID required' });
+    const [posts] = await conn.query(
+    res.json(posts);
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ error: 'Failed to fetch posts' });
+app.get('/api/auth/me', (req, res) => {
+  res.json({
+app.get('/api/activity/community/:id', (req, res) => {
+  res.json([]);
+app.listen(PORT, () => {
+  console.log(`Test API server running on port ${PORT}`);
+
+================
+File: backend/testServer.js
+================
+const app = express();
+app.use(express.json());
+app.use(cors());
+app.get('/api/test', async (req, res) => {
+    const connection = await pool.getConnection();
+    const [rows] = await connection.query('SELECT 1 as test');
+    connection.release();
+    res.json({ message: 'Database connection successful', data: rows });
+    console.error('Database connection error:', error);
+    res.status(500).json({ error: 'Database connection failed', details: error.message });
+app.get('/api/communities', async (req, res) => {
+      [rows] = await connection.query('SELECT * FROM community');
+      [rows] = await connection.query('SELECT * FROM communities');
+    res.json(rows);
+    console.error('Error fetching communities:', error);
+    res.status(500).json({ error: 'Failed to fetch communities', details: error.message });
+app.get('/api/auth/me', (req, res) => {
+  res.json({
+app.listen(port, () => {
+  console.log(`Backend test server is running on http://localhost:${port}`);
+
+================
 File: backend/tsconfig.json
 ================
 {
@@ -13227,9 +11545,11 @@ File: backend/tsconfig.json
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
-  "include": ["*.ts", "api/*.ts"]
+  "include": ["*.ts", "api/**/*.ts", "db/**/*.ts", "middleware/**/*.ts", "routes/**/*.ts", "types/**/*.ts"],
+  "files": ["index.ts"]
 }
 
 ================
@@ -13247,6 +11567,9 @@ export interface ModeratorPermissionInput {
 export interface ExtendedCommunitySettings {
 export interface ExtendedCommunitySettingsInput {
 export interface PostModeration {
+export interface ModerationLog {
+export interface BannedUser {
+export interface AuthRequest extends Express.Request {
 
 ================
 File: eslint.config.js
@@ -13314,67 +11637,6 @@ File: package.json
     "vite": "^6.2.0"
   }
 }
-
-================
-File: PLACEHOLDERS.md
-================
-# Placeholder Comments
-
-This file lists placeholder comments (TODO, FIXME, PLACEHOLDER) found in the application code.
-
-## src
-
-### components
-
-#### CommunityAbout.tsx
-
-- `// TODO: Fetch about info from API`
-
-#### CommunityHeader.tsx
-
-- `// TODO: Fetch community data from API`
-
-#### CommunityInfo.tsx
-
-- `// TODO: Fetch community info from API`
-
-#### CommunityList.tsx
-
-- `// TODO: Fetch communities from API`
-
-#### CommunityRules.tsx
-
-- `// TODO: Fetch rules from API`
-
-#### CommunitySearch.tsx
-
-- `// TODO: Implement search functionality`
-
-#### CommunitySettings.tsx
-
-- `// TODO: Fetch settings from API`
-- `// TODO: Update privacy setting via API`
-
-#### CreatePostModal.tsx
-
-- `// TODO: Fetch user's communities from API`
-- `// TODO: Handle post submission`
-
-#### Post.tsx
-
-- `// TODO: Fetch post data from API`
-
-#### PostList.tsx
-
-- `// TODO: Fetch posts from API`
-
-#### UserPosts.tsx
-
-- `// TODO: Fetch user's posts from API`
-
-#### CommentSection.tsx
-
-- `// TODO: Fetch comments for postId from API`
 
 ================
 File: postcss.config.js
@@ -13812,6 +12074,23 @@ export async function getCommunityAbout(communityId: string) {
 export async function getCommunityModerators(communityId: string, token?: string | null) {
 
 ================
+File: src/api/compatibility.ts
+================
+export async function handleApiResponse(response: Response) {
+    throw new Error(errorData.error || `Failed with status: ${response.status}`);
+export async function safeGetArray(url: string, token?: string | null): Promise<any[]> {
+export async function safeGetObject(url: string, token?: string | null): Promise<any | null> {
+export async function getCommunityActivities(communityId: string, limit = 10): Promise<any[]> {
+export async function getCommunityRules(communityId: string, token?: string | null): Promise<any[]> {
+export async function getCommunityPosts(communityId: string, token?: string | null): Promise<any[]> {
+export async function getCommunitySettings(communityId: string, token?: string | null): Promise<any | null> {
+export async function getCommunityMembers(communityId: string, token?: string | null): Promise<any[]> {
+export async function getCommunityDetails(communityId: string, token?: string | null): Promise<any | null> {
+export async function getActivityHistory(entity: 'community' | 'user' | 'post', id: string, token?: string | null): Promise<any[]> {
+export async function getPostComments(postId: string, threaded: boolean = false): Promise<any[]> {
+export async function getUserVoteOnPost(postId: string, token?: string | null): Promise<number> {
+
+================
 File: src/api/mockData.ts
 ================
 
@@ -13899,14 +12178,189 @@ export default function App() {
 ================
 File: src/components/ActivityHistory.tsx
 ================
+interface Activity {
 interface ActivityHistoryProps {
   const fetchActivities = async () => {
-      const options: ActivityQueryOptions = {
   const loadMore = () => {
-  const resetFilters = () => {
-  const getActivityIcon = (activity: Activity) => {
-                <div className="text-2xl mr-3">{getActivityIcon(activity)}</div>
-                    {formatActivity(activity)}
+
+================
+File: src/components/ActivityHistory.tsxold
+================
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { 
+  formatActivity,
+  ActivityQueryOptions
+} from '../api/activities';
+import { getActivityHistory } from '../api/compatibility';
+
+interface Activity {
+  id: string;
+  user_id: string;
+  activity_type_id: string;
+  action_id: string;
+  entity_id?: string;
+  entity_type?: string;
+  metadata?: any;
+  created_at: string;
+  activity_type_name: string;
+  action_name: string;
+  username?: string;
+  entity_details?: any;
+}
+
+interface ActivityHistoryProps {
+  userId?: string;
+  communityId?: string;
+  postId?: string;
+  limit?: number;
+  showFilters?: boolean;
+}
+
+const ActivityHistory: React.FC<ActivityHistoryProps> = ({ 
+  userId, 
+  communityId, 
+  postId, 
+  limit = 20,
+  showFilters = false
+}) => {
+  const { token } = useAuth();
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  
+  // Filter states
+  const [activityType, setActivityType] = useState<string>('');
+  const [actionType, setActionType] = useState<string>('');
+  const [entityType, setEntityType] = useState<string>('');
+  
+  useEffect(() => {
+    fetchActivities();
+  }, [userId, communityId, postId, offset, activityType, actionType, entityType]);
+  
+  const fetchActivities = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let result: Activity[] = [];
+      
+      // Use the compatibility layer to get activities
+      if (communityId) {
+        result = await getActivityHistory('community', communityId, token) as Activity[];
+      } else if (userId) {
+        result = await getActivityHistory('user', userId, token) as Activity[];
+      } else if (postId) {
+        result = await getActivityHistory('post', postId, token) as Activity[];
+      }
+      
+      setActivities(result);
+      setHasMore(result.length === limit);
+    } catch (error: any) {
+      console.error('Error fetching activities:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const loadMore = () => {
+    setOffset(prev => prev + limit);
+  };
+  
+  if (loading && activities.length === 0) {
+    return <div className="text-center py-4">Loading activities...</div>;
+  }
+  
+  if (error && activities.length === 0) {
+    return (
+      <div className="text-center text-red-500 py-4">
+        Error loading activities: {error}
+      </div>
+    );
+  }
+  
+  if (activities.length === 0) {
+    return <div className="text-center py-4">No activities found.</div>;
+  }
+  
+  return (
+    <div className="activity-history mt-4">
+      {showFilters && (
+        <div className="filters mb-4 flex gap-2 flex-wrap">
+          <select 
+            value={activityType} 
+            onChange={e => setActivityType(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Activity Types</option>
+            <option value="POST">Posts</option>
+            <option value="COMMENT">Comments</option>
+            <option value="VOTE">Votes</option>
+            <option value="COMMUNITY">Communities</option>
+          </select>
+          
+          <select 
+            value={actionType} 
+            onChange={e => setActionType(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Actions</option>
+            <option value="CREATE">Create</option>
+            <option value="UPDATE">Update</option>
+            <option value="DELETE">Delete</option>
+            <option value="UPVOTE">Upvote</option>
+            <option value="DOWNVOTE">Downvote</option>
+            <option value="JOIN">Join</option>
+            <option value="LEAVE">Leave</option>
+          </select>
+          
+          <select 
+            value={entityType} 
+            onChange={e => setEntityType(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Entities</option>
+            <option value="post">Posts</option>
+            <option value="comment">Comments</option>
+            <option value="community">Communities</option>
+            <option value="user">Users</option>
+          </select>
+        </div>
+      )}
+      
+      <ul className="divide-y">
+        {activities.map(activity => (
+          <li key={activity.id} className="py-2">
+            <div className="flex justify-between">
+              <div>
+                <strong>{activity.username || 'User'}</strong> {' '}
+                {formatActivity(activity)}
+              </div>
+              <div className="text-gray-500 text-sm">
+                {new Date(activity.created_at).toLocaleString()}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+      
+      {hasMore && (
+        <button 
+          onClick={loadMore} 
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          disabled={loading}
+        >
+          {loading ? 'Loading...' : 'Load More'}
+        </button>
+      )}
+    </div>
+  );
+};
+
+export default ActivityHistory;
 
 ================
 File: src/components/CommentItem.tsx
@@ -13966,15 +12420,9 @@ interface Props {
 export default function CommunityHeader({ communityId }: Props) {
   const getDemoStats = (community: any) => {
     async function fetchCommunity() {
-          const formattedData: CommunityAbout = {
-            created_at: communityData.created_at || new Date().toISOString()
-      const checkMembership = async () => {
-  const handleJoin = async () => {
-          throw new Error('Invite-only community');
-          throw new Error('Requires approval');
-          throw new Error(errorData.error || 'Failed to join community');
-  const handleLeave = async () => {
-        throw new Error(errorData.error || 'Failed to leave community');
+  const joinCommunity = async () => {
+  const leaveCommunity = async () => {
+              Created {new Date(community.created_at).toLocaleDateString()}
 
 ================
 File: src/components/CommunityInfo.tsx
@@ -14116,6 +12564,7 @@ interface Post {
 interface PostListProps {
 export default function PostList({ communityId }: PostListProps) {
     async function fetchData() {
+            timestamp: post.created_at || new Date().toISOString(),
 
 ================
 File: src/components/ProfileActions.tsx

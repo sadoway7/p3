@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { ArrowUp, MessageSquare, Share2, Bookmark } from 'lucide-react'
 import { getPost } from '../api/posts'
-import { voteOnPost } from '../api/votes'
-import { getUserVoteOnPost } from '../api/compatibility'
+import { voteOnPost, getUserPostVote } from '../api/votes'
 import { useAuth } from '../context/AuthContext'
 import { formatDistanceToNow } from 'date-fns'
 import { Link } from 'react-router-dom'
@@ -17,19 +16,20 @@ export default function Post({ postId }: PostProps) {
   const [error, setError] = useState<string | null>(null)
   const [userVote, setUserVote] = useState<number>(0)
   const [voteLoading, setVoteLoading] = useState<boolean>(false)
+  const [votes, setVotes] = useState<number>(0)
   const { user, token } = useAuth()
 
-  // Fetch post data
   useEffect(() => {
     const fetchPost = async () => {
       try {
         setLoading(true)
-        const data = await getPost(postId)
+        const data = await getPost(postId, token)
         setPost(data)
+        setVotes(data.votes || 0)
         setError(null)
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching post:', err)
-        setError(err.message || 'Failed to load post')
+        setError('Failed to load post')
       } finally {
         setLoading(false)
       }
@@ -46,13 +46,10 @@ export default function Post({ postId }: PostProps) {
       if (!user || !token || !postId) return
       
       try {
-        // Use the compatibility layer function which handles errors
-        const voteValue = await getUserVoteOnPost(postId, token)
-        setUserVote(voteValue)
+        const response = await getUserPostVote(postId, token)
+        setUserVote(response.value)
       } catch (err) {
         console.error('Error fetching user vote:', err)
-        // Default to no vote
-        setUserVote(0)
       }
     }
     
@@ -71,22 +68,32 @@ export default function Post({ postId }: PostProps) {
     try {
       setVoteLoading(true)
       
-      // Toggle vote off if clicking the same button twice
-      const newValue = userVote === voteValue ? 0 : voteValue
+      // Determine the new vote value
+      let newVoteValue = voteValue
       
-      await voteOnPost(postId, newValue, token)
-      setUserVote(newValue)
-      
-      // Update post vote count optimistically
-      if (post) {
-        const votes = post.votes || 0
-        setPost({
-          ...post,
-          votes: votes - userVote + newValue
-        })
+      // If user clicks the same vote button again, remove the vote
+      if (userVote === voteValue) {
+        newVoteValue = 0
       }
+      
+      // Calculate the vote difference for optimistic UI update
+      const voteDifference = newVoteValue - userVote
+      
+      // Update UI optimistically
+      setUserVote(newVoteValue)
+      setVotes(prev => prev + voteDifference)
+      
+      // Make API call
+      await voteOnPost(postId, newVoteValue, token)
     } catch (err) {
       console.error('Error voting:', err)
+      
+      // Revert optimistic updates on failure
+      setUserVote(userVote)
+      setVotes(votes)
+      
+      // Show error message
+      alert('Failed to vote. Please try again.')
     } finally {
       setVoteLoading(false)
     }
@@ -94,111 +101,132 @@ export default function Post({ postId }: PostProps) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-4 mb-4 animate-pulse">
-        <div className="flex items-start space-x-4">
-          {/* Vote buttons placeholder */}
-          <div className="flex flex-col items-center space-y-1 w-10">
-            <div className="h-8 w-8 bg-gray-200 rounded"></div>
-            <div className="h-5 w-5 bg-gray-200 rounded"></div>
-            <div className="h-8 w-8 bg-gray-200 rounded"></div>
-          </div>
-          
-          {/* Post content placeholder */}
-          <div className="flex-1">
-            <div className="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
-            <div className="h-24 bg-gray-100 rounded mb-2"></div>
-          </div>
-        </div>
+      <div className="bg-white p-6 shadow-md mb-6 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-        <div className="text-red-500">Error: {error}</div>
+      <div className="bg-white p-6 border-l-4 border-red-500 shadow-md mb-6">
+        <div className="flex items-center">
+          <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="font-medium">{error}</span>
+        </div>
       </div>
     )
   }
 
   if (!post) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-        <div className="text-gray-500">Post not found</div>
+      <div className="bg-white p-6 border-l-4 border-yellow-500 shadow-md mb-6">
+        <div className="flex items-center">
+          <svg className="w-6 h-6 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="font-medium">Post not found</span>
+        </div>
+        <p className="mt-2 text-gray-600">This post doesn't exist or has been deleted.</p>
       </div>
     )
   }
 
-  const {
-    title,
-    content,
-    username,
-    community_name,
-    created_at,
-    votes = 0,
-    comments_count = 0
-  } = post
+  // Format timestamp
+  const timestamp = post.timestamp || post.created_at
+  const formattedTime = timestamp 
+    ? formatDistanceToNow(new Date(timestamp), { addSuffix: true })
+    : 'unknown time'
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-      <div className="flex items-start space-x-2">
-        {/* Vote buttons */}
-        <div className="flex flex-col items-center space-y-1">
+    <div className="bg-white p-6 shadow-md mb-6">      
+      <div className="flex">
+        {/* Voting */}
+        <div className="flex flex-col items-center mr-4">
           <button 
-            className={`p-1 rounded hover:bg-gray-100 ${userVote === 1 ? 'text-orange-500' : 'text-gray-400'}`}
+            className={`p-1 rounded transition-colors ${
+              userVote === 1 
+                ? 'text-blue-600'
+                : 'text-gray-500 hover:text-blue-600'
+            }`}
             onClick={() => handleVote(1)}
             disabled={voteLoading}
-            aria-label="Upvote"
           >
-            <ArrowUp size={20} />
+            <ArrowUp className="w-6 h-6" />
           </button>
-          
-          <span className="text-xs font-medium text-gray-800">
+          <span className={`font-medium my-1 ${
+            votes > 0 ? 'text-blue-600' : votes < 0 ? 'text-red-600' : 'text-gray-700'
+          }`}>
             {votes}
           </span>
-          
           <button 
-            className={`p-1 rounded hover:bg-gray-100 ${userVote === -1 ? 'text-blue-500' : 'text-gray-400'}`}
+            className={`p-1 rounded transition-colors transform rotate-180 ${
+              userVote === -1 
+                ? 'text-red-600'
+                : 'text-gray-500 hover:text-red-600'
+            }`}
             onClick={() => handleVote(-1)}
             disabled={voteLoading}
-            aria-label="Downvote"
           >
-            <ArrowUp size={20} className="transform rotate-180" />
+            <ArrowUp className="w-6 h-6" />
           </button>
         </div>
-        
-        {/* Post content */}
+
+        {/* Content */}
         <div className="flex-1">
-          <div className="text-xs text-gray-500 mb-1">
-            Posted in <Link to={`/community/${post.community_id}`} className="hover:underline">{community_name}</Link>
-            {' '}by {username} • {formatDistanceToNow(new Date(created_at), { addSuffix: true })}
+          {/* Post metadata */}
+          <div className="mb-2 text-sm text-gray-500">
+            {post.community ? (
+              <Link to={`/communities/${post.community_id}`} className="font-medium text-blue-600 hover:underline">
+                r/{post.community}
+              </Link>
+            ) : (
+              <span className="font-medium">Posted by {post.username || 'Anonymous'}</span>
+            )}
+            <span className="mx-1">·</span>
+            <span>{formattedTime}</span>
           </div>
           
-          <h2 className="text-lg font-medium mb-2">{title}</h2>
-          
-          <div className="text-sm text-gray-700 mb-3">
-            {content}
+          {/* Post title and content */}
+          <h1 className="text-2xl font-bold mb-2">{post.title}</h1>
+          <div className="text-gray-800 mb-4 whitespace-pre-line">
+            {post.content}
           </div>
           
-          {/* Post actions */}
-          <div className="flex items-center text-gray-500 text-xs">
-            <Link to={`/post/${postId}`} className="flex items-center hover:bg-gray-100 px-2 py-1 rounded">
-              <MessageSquare size={16} className="mr-1" />
-              {comments_count} {comments_count === 1 ? 'Comment' : 'Comments'}
-            </Link>
-            
-            <button className="flex items-center hover:bg-gray-100 px-2 py-1 rounded ml-2">
-              <Share2 size={16} className="mr-1" />
-              Share
-            </button>
-            
-            <button className="flex items-center hover:bg-gray-100 px-2 py-1 rounded ml-2">
-              <Bookmark size={16} className="mr-1" />
-              Save
-            </button>
-          </div>
+          {/* Post tags/categories if available */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {post.tags.map((tag: string) => (
+                <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+      
+      {/* Post Actions */}
+      <div className="mt-4 pt-3 border-t border-gray-100 flex space-x-6">
+        <button className="flex items-center text-gray-500 hover:text-blue-600">
+          <MessageSquare className="w-5 h-5 mr-1" />
+          <span>Comments</span>
+        </button>
+        
+        <button className="flex items-center text-gray-500 hover:text-green-600">
+          <Share2 className="w-5 h-5 mr-1" />
+          <span>Share</span>
+        </button>
+        
+        <button className="flex items-center text-gray-500 hover:text-purple-600">
+          <Bookmark className="w-5 h-5 mr-1" />
+          <span>Save</span>
+        </button>
       </div>
     </div>
   )
