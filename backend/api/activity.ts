@@ -1,10 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
-import pool from '../db/connection.js';
+import pool from '../db/connection';
 import type { ActivityOptions, ActivityData, Activity, ActivityType, ActionType } from '../types/index';
-import { RowDataPacket, ResultSetHeader, FieldPacket } from 'mysql2/promise';
 
 // Custom type for activity row data
-interface ActivityRow extends RowDataPacket, Activity {}
+interface ActivityRow {
+  entity_id?: string;
+  entity_type?: string;
+  entity_details?: any;
+  [key: string]: any;
+}
 
 /**
  * Get activities for a specific user
@@ -62,24 +66,26 @@ export async function getUserActivities(userId: string, options: ActivityOptions
     query += " ORDER BY a.created_at DESC LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit.toString()), parseInt(offset.toString()));
     
-    const [rows] = await conn.query<ActivityRow[]>(query, queryParams);
+    const [rows] = await conn.query(query, queryParams);
     
     // Enrich activities with entity details
     if (Array.isArray(rows)) {
-      for (let activity of rows) {
-        if (activity.entity_id && activity.entity_type) {
+      for (let activity of rows as ActivityRow[]) {
+        if (activity && activity.entity_id && activity.entity_type) {
           try {
             const entityDetails = await getEntityDetails(conn, activity.entity_id, activity.entity_type);
             activity.entity_details = entityDetails;
           } catch (detailsError) {
             console.error(`Error fetching details for ${activity.entity_type}:${activity.entity_id}`, detailsError);
-            activity.entity_details = null;
+            activity.entity_details = undefined;
           }
         }
       }
+    } else {
+      console.warn("Expected activities array but received:", typeof rows);
     }
     
-    return rows;
+    return rows as Activity[];
   } catch (error) {
     console.error("Error fetching user activities:", error);
     throw error;
@@ -155,24 +161,26 @@ export async function getCommunityActivities(communityId: string, options: Activ
     query += " ORDER BY a.created_at DESC LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit.toString()), parseInt(offset.toString()));
     
-    const [rows] = await conn.query<ActivityRow[]>(query, queryParams);
+    const [rows] = await conn.query(query, queryParams);
     
     // Enrich activities with entity details
     if (Array.isArray(rows)) {
-      for (let activity of rows) {
-        if (activity.entity_id && activity.entity_type) {
+      for (let activity of rows as ActivityRow[]) {
+        if (activity && activity.entity_id && activity.entity_type) {
           try {
             const entityDetails = await getEntityDetails(conn, activity.entity_id, activity.entity_type);
             activity.entity_details = entityDetails;
           } catch (detailsError) {
             console.error(`Error fetching details for ${activity.entity_type}:${activity.entity_id}`, detailsError);
-            activity.entity_details = null;
+            activity.entity_details = undefined;
           }
         }
       }
+    } else {
+      console.warn("Expected activities array but received:", typeof rows);
     }
     
-    return rows;
+    return rows as Activity[];
   } catch (error) {
     console.error("Error fetching community activities:", error);
     throw error;
@@ -207,24 +215,26 @@ export async function getPostActivities(postId: string, options: ActivityOptions
       LIMIT ? OFFSET ?
     `;
     
-    const [rows] = await conn.query<ActivityRow[]>(query, [postId, postId, parseInt(limit.toString()), parseInt(offset.toString())]);
+    const [rows] = await conn.query(query, [postId, postId, parseInt(limit.toString()), parseInt(offset.toString())]);
     
     // Enrich activities with entity details
     if (Array.isArray(rows)) {
-      for (let activity of rows) {
-        if (activity.entity_id && activity.entity_type) {
+      for (let activity of rows as ActivityRow[]) {
+        if (activity && activity.entity_id && activity.entity_type) {
           try {
             const entityDetails = await getEntityDetails(conn, activity.entity_id, activity.entity_type);
             activity.entity_details = entityDetails;
           } catch (detailsError) {
             console.error(`Error fetching details for ${activity.entity_type}:${activity.entity_id}`, detailsError);
-            activity.entity_details = null;
+            activity.entity_details = undefined;
           }
         }
       }
+    } else {
+      console.warn("Expected activities array but received:", typeof rows);
     }
     
-    return rows;
+    return rows as Activity[];
   } catch (error) {
     console.error("Error fetching post activities:", error);
     throw error;
@@ -241,9 +251,9 @@ export async function getActivityTypes(): Promise<ActivityType[]> {
   try {
     conn = await pool.getConnection();
     
-    const [rows] = await conn.query<(ActivityType & RowDataPacket)[]>("SELECT * FROM activity_type ORDER BY name");
+    const [rows] = await conn.query("SELECT * FROM activity_type ORDER BY name");
     
-    return rows || [];
+    return rows as ActivityType[];
   } catch (error) {
     console.error("Error fetching activity types:", error);
     throw error;
@@ -260,9 +270,9 @@ export async function getActionTypes(): Promise<ActionType[]> {
   try {
     conn = await pool.getConnection();
     
-    const [rows] = await conn.query<(ActionType & RowDataPacket)[]>("SELECT * FROM action ORDER BY name");
+    const [rows] = await conn.query("SELECT * FROM action ORDER BY name");
     
-    return rows || [];
+    return rows as ActionType[];
   } catch (error) {
     console.error("Error fetching action types:", error);
     throw error;
@@ -296,13 +306,13 @@ export async function logActivity(activityData: ActivityData): Promise<Activity 
     conn = await pool.getConnection();
     
     // Get activity type ID
-    const [activityTypeRows] = await conn.query<RowDataPacket[]>(
+    const [activityTypeRows] = await conn.query(
       "SELECT id FROM activity_type WHERE name = ?",
       [activityType]
     );
     
     let activityTypeId: string;
-    if (!activityTypeRows || activityTypeRows.length === 0) {
+    if (!activityTypeRows || (Array.isArray(activityTypeRows) && activityTypeRows.length === 0)) {
       // Create the activity type if it doesn't exist
       console.warn(`Activity type '${activityType}' not found, creating it.`);
       activityTypeId = uuidv4();
@@ -311,17 +321,19 @@ export async function logActivity(activityData: ActivityData): Promise<Activity 
         [activityTypeId, activityType]
       );
     } else {
-      activityTypeId = activityTypeRows[0].id;
+      // Access as object with indexed property
+      const rows = activityTypeRows as any[];
+      activityTypeId = rows[0]['id'];
     }
     
     // Get action type ID
-    const [actionTypeRows] = await conn.query<RowDataPacket[]>(
+    const [actionTypeRows] = await conn.query(
       "SELECT id FROM action WHERE name = ?",
       [actionType]
     );
     
     let actionTypeId: string;
-    if (!actionTypeRows || actionTypeRows.length === 0) {
+    if (!actionTypeRows || (Array.isArray(actionTypeRows) && actionTypeRows.length === 0)) {
       // Create the action type if it doesn't exist
       console.warn(`Action type '${actionType}' not found, creating it.`);
       actionTypeId = uuidv4();
@@ -330,7 +342,9 @@ export async function logActivity(activityData: ActivityData): Promise<Activity 
         [actionTypeId, actionType]
       );
     } else {
-      actionTypeId = actionTypeRows[0].id;
+      // Access as object with indexed property
+      const rows = actionTypeRows as any[];
+      actionTypeId = rows[0]['id'];
     }
     
     // Create activity
@@ -355,7 +369,7 @@ export async function logActivity(activityData: ActivityData): Promise<Activity 
     );
     
     // Get the created activity
-    const [activityRows] = await conn.query<ActivityRow[]>(
+    const [activityRows] = await conn.query(
       `SELECT a.*, at.name as activity_type_name, act.name as action_name
        FROM activity a
        JOIN activity_type at ON a.activity_type_id = at.id
@@ -364,7 +378,7 @@ export async function logActivity(activityData: ActivityData): Promise<Activity 
       [activityId]
     );
     
-    return activityRows && activityRows.length > 0 ? activityRows[0] : null;
+    return Array.isArray(activityRows) && activityRows.length > 0 ? activityRows[0] as Activity : null;
   } catch (error) {
     console.error("Error logging activity:", error);
     // Don't throw - we don't want activity logging to break the application
@@ -385,7 +399,7 @@ async function getEntityDetails(conn: any, entityId: string, entityType: string)
   try {
     switch (entityType) {
       case 'post': {
-        const [rows] = await conn.query<RowDataPacket[]>(
+        const [rows] = await conn.query(
           `SELECT p.id, p.title, p.content, p.community_id, c.name as community_name, u.username
            FROM post p
            LEFT JOIN community c ON p.community_id = c.id
@@ -393,10 +407,10 @@ async function getEntityDetails(conn: any, entityId: string, entityType: string)
            WHERE p.id = ?`,
           [entityId]
         );
-        return rows && rows.length > 0 ? rows[0] : null;
+        return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
       }
       case 'comment': {
-        const [rows] = await conn.query<RowDataPacket[]>(
+        const [rows] = await conn.query(
           `SELECT c.id, c.content, c.post_id, p.title as post_title, u.username
            FROM comment c
            LEFT JOIN post p ON c.post_id = p.id
@@ -404,21 +418,21 @@ async function getEntityDetails(conn: any, entityId: string, entityType: string)
            WHERE c.id = ?`,
           [entityId]
         );
-        return rows && rows.length > 0 ? rows[0] : null;
+        return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
       }
       case 'community': {
-        const [rows] = await conn.query<RowDataPacket[]>(
+        const [rows] = await conn.query(
           "SELECT id, name, description FROM community WHERE id = ?",
           [entityId]
         );
-        return rows && rows.length > 0 ? rows[0] : null;
+        return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
       }
       case 'user': {
-        const [rows] = await conn.query<RowDataPacket[]>(
+        const [rows] = await conn.query(
           "SELECT id, username, display_name FROM user WHERE id = ?",
           [entityId]
         );
-        return rows && rows.length > 0 ? rows[0] : null;
+        return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
       }
       default:
         return null;

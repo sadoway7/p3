@@ -12,8 +12,8 @@ export interface ActivityData {
   userId: string;
   activityType: string;
   actionType: string;
-  entityId: string;
-  entityType: string;
+  entityId?: string;
+  entityType?: string;
   metadata?: any;
   ipAddress?: string;
   userAgent?: string;
@@ -24,11 +24,11 @@ export interface Activity {
   user_id: string;
   activity_type_id: string;
   action_id: string;
-  entity_id: string | null;
-  entity_type: string | null;
-  metadata: string | null;
+  entity_id?: string | null;
+  entity_type?: string | null;
+  metadata?: string | null;
   created_at: Date;
-  entity_details?: object;
+  entity_details?: any;
 }
 
 export interface ActivityType {
@@ -90,4 +90,35 @@ export interface PostModeration {
   reason: string | null;
   moderated_at: Date | null;
   created_at: Date;
+}
+
+export interface ModerationLog {
+  id: string;
+  community_id: string;
+  moderator_id: string;
+  action_type: string;
+  entity_type: string;
+  entity_id: string;
+  reason: string | null;
+  metadata: any | null;
+  created_at: Date;
+}
+
+export interface BannedUser {
+  community_id: string;
+  user_id: string;
+  reason: string | null;
+  banned_by: string;
+  expires_at: Date | null;
+  created_at: Date;
+}
+
+// Express request with user
+export interface AuthRequest extends Express.Request {
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+  };
 }
