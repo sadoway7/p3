@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  getEnhancedCommunitySettings,
-  updateEnhancedCommunitySettings,
+  getCommunitySettings,
+  updateCommunitySettings,
   CommunitySettings,
   getModerationLogs,
   ModerationLog,
@@ -61,7 +61,7 @@ const ModeratorDashboard: React.FC<ModeratorDashboardProps> = ({ communityId }) 
     try {
       // Load data based on active tab
       if (activeTab === 'settings') {
-        const communitySettings = await getEnhancedCommunitySettings(communityId, token);
+        const communitySettings = await getCommunitySettings(communityId, token);
         setSettings(communitySettings);
         setEditedSettings({});
       } else if (activeTab === 'members') {
@@ -106,7 +106,7 @@ const ModeratorDashboard: React.FC<ModeratorDashboardProps> = ({ communityId }) 
     setError(null);
     
     try {
-      const updatedSettings = await updateEnhancedCommunitySettings(communityId, editedSettings, token);
+      const updatedSettings = await updateCommunitySettings(communityId, editedSettings, token);
       setSettings(updatedSettings);
       setEditedSettings({});
       alert('Settings saved successfully!');

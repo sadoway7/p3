@@ -44,7 +44,8 @@ export default function CreateCommunityModal({ onClose, onSuccess }: CreateCommu
       const newCommunity = await createCommunity({
         name,
         description,
-        privacy
+        privacy,
+        creator_id: user?.id // Include the creator_id from auth context
       }, token);
       
       if (onSuccess) {

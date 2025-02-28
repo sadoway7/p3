@@ -145,24 +145,24 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
   const getIndentClass = () => {
     if (level === 0) return '';
     const indentLevel = Math.min(level, 6); // Cap at 6 levels
-    return `ml-${indentLevel * 3}`;
+    return `ml-${indentLevel * 4}`;
   };
   
   // Determine color accent based on nesting level
-  const colorAccents = ['teal', 'pink', 'purple', 'blue', 'amber', 'green'];
+  const colorAccents = ['teal', 'pink', 'purple', 'teal', 'pink', 'purple'];
   const colorAccent = colorAccents[level % colorAccents.length];
   
   return (
     <>
-      <div className={`bg-white p-4 shadow-sm border-l-2 border-${colorAccent}-400 ${getIndentClass()} mb-3`}>        
+      <div className={`bg-white p-4 rounded-sm shadow-sm border-l-2 border-${colorAccent}-400 ${getIndentClass()} mb-3 hover:shadow-md transition-shadow`}>        
         <div className="flex items-start gap-2">
           {/* Voting */}
-          <div className="flex flex-col items-center mr-1">
+          <div className="flex flex-col items-center mr-2">
             <button
               className={`p-1 transition-colors ${
                 userVote === 1 
-                  ? 'text-blue-600'
-                  : 'text-gray-500 hover:text-blue-600'
+                  ? `text-${colorAccent}-600`
+                  : `text-gray-400 hover:text-${colorAccent}-600`
               }`}
               onClick={() => handleVote(1)}
               disabled={voteLoading}
@@ -170,15 +170,15 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
               <ArrowUp className="w-4 h-4" />
             </button>
             <span className={`text-xs font-medium ${
-              voteCount > 0 ? 'text-blue-600' : voteCount < 0 ? 'text-red-600' : 'text-gray-700'
+              voteCount > 0 ? `text-${colorAccent}-600` : voteCount < 0 ? 'text-pink-600' : 'text-gray-700'
             }`}>
               {voteCount}
             </span>
             <button
               className={`p-1 transition-colors transform rotate-180 ${
                 userVote === -1 
-                  ? 'text-red-600'
-                  : 'text-gray-500 hover:text-red-600'
+                  ? 'text-pink-600'
+                  : 'text-gray-400 hover:text-pink-600'
               }`}
               onClick={() => handleVote(-1)}
               disabled={voteLoading}
@@ -192,7 +192,7 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
             {isEditing ? (
               <form onSubmit={handleEditComment} className="w-full">
                 <textarea
-                  className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                  className={`w-full p-2 border border-gray-200 rounded focus:border-${colorAccent}-400 focus:outline-none transition-colors`}
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   rows={3}
@@ -200,13 +200,13 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
                 <div className="flex gap-2 mt-2">
                   <button 
                     type="submit"
-                    className="px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800"
+                    className={`px-3 py-1 text-sm bg-${colorAccent}-600 text-white rounded hover:bg-${colorAccent}-700 transition-colors`}
                   >
                     Save
                   </button>
                   <button 
                     type="button"
-                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
                     onClick={() => setIsEditing(false)}
                   >
                     Cancel
@@ -226,7 +226,7 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
                 <div className="flex gap-4 mt-2 text-xs">
                   {user && level < maxLevel && (
                     <button 
-                      className="flex items-center text-gray-500 hover:text-blue-600"
+                      className={`flex items-center text-gray-500 hover:text-${colorAccent}-600 transition-colors`}
                       onClick={() => setIsReplying(!isReplying)}
                     >
                       <Reply className="w-3 h-3 mr-1" />
@@ -237,7 +237,7 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
                   {isAuthor && (
                     <>
                       <button 
-                        className="flex items-center text-gray-500 hover:text-green-600"
+                        className="flex items-center text-gray-500 hover:text-teal-600 transition-colors"
                         onClick={() => setIsEditing(true)}
                       >
                         <Edit className="w-3 h-3 mr-1" />
@@ -245,7 +245,7 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
                       </button>
                       
                       <button 
-                        className="flex items-center text-gray-500 hover:text-red-600"
+                        className="flex items-center text-gray-500 hover:text-pink-600 transition-colors"
                         onClick={handleDeleteComment}
                         disabled={isDeleting}
                       >
@@ -262,7 +262,7 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
             {isReplying && (
               <form onSubmit={handleSubmitReply} className="mt-3">
                 <textarea
-                  className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                  className={`w-full p-2 border border-gray-200 rounded focus:border-${colorAccent}-400 focus:outline-none transition-colors`}
                   placeholder="Write a reply..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
@@ -271,14 +271,14 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
                 <div className="flex gap-2 mt-2">
                   <button 
                     type="submit"
-                    className="px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800"
+                    className={`px-3 py-1 text-sm bg-${colorAccent}-600 text-white rounded hover:bg-${colorAccent}-700 transition-colors`}
                     disabled={!replyText.trim()}
                   >
                     Reply
                   </button>
                   <button 
                     type="button"
-                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
                     onClick={() => {
                       setIsReplying(false)
                       setReplyText('')
@@ -295,7 +295,7 @@ export default function CommentItem({ comment, onReply, level = 0 }: CommentItem
       
       {/* Render replies */}
       {comment.replies && comment.replies.length > 0 && (
-        <div className="ml-2 border-l border-gray-200 pl-2">
+        <div className={`ml-4 pl-2 ${level < 1 ? 'border-l border-gray-200' : ''}`}>
           {comment.replies.map((reply) => (
             <CommentItem 
               key={reply.id} 

@@ -24,33 +24,54 @@ export default function CommentSection({ postId }: CommentSectionProps) {
     const fetchComments = async () => {
       try {
         setLoading(true)
+        console.log('Fetching comments for post:', postId)
         const data = await getPostComments(postId, true) // Get threaded comments
-        setComments(data)
+        console.log('Comments data:', data)
+        setComments(data || []) // Ensure we always have an array even if API returns null/undefined
         setError(null)
       } catch (err) {
         console.error('Error fetching comments:', err)
         setError('Failed to load comments')
+        setComments([]) // Set empty array on error
       } finally {
         setLoading(false)
       }
     }
 
-    fetchComments()
+    if (postId) {
+      fetchComments()
+    } else {
+      setLoading(false)
+      setComments([])
+    }
   }, [postId])
 
   // Handle comment submission
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!commentText.trim() || !user) return
+    if (!commentText.trim() || !user) {
+      if (!user) {
+        setError('You must be logged in to comment')
+      }
+      return
+    }
+    
+    setError(null) // Clear any previous errors
     
     try {
       setSubmitting(true)
+      console.log('Submitting comment for post:', postId)
+      console.log('Comment text:', commentText)
+      console.log('User:', user.username)
+      
       const newComment = await createComment(
         postId, 
         { content: commentText },
         token
       )
+      
+      console.log('Comment submission successful, response:', newComment)
       
       // Add the new comment to the list
       setComments(prevComments => [...prevComments, {
@@ -61,9 +82,18 @@ export default function CommentSection({ postId }: CommentSectionProps) {
       
       // Clear the input
       setCommentText('')
-    } catch (err) {
+      
+      // Show success message temporarily
+      setError('Comment posted successfully!')
+      setTimeout(() => setError(null), 3000)
+    } catch (err: any) {
       console.error('Error posting comment:', err)
-      setError('Failed to post comment')
+      // Provide more detailed error message
+      if (err instanceof Error) {
+        setError(`Failed to post comment: ${err.message}`)
+      } else {
+        setError('Failed to post comment. Please try again.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -121,6 +151,12 @@ export default function CommentSection({ postId }: CommentSectionProps) {
       return true
     } catch (err) {
       console.error('Error posting reply:', err)
+      if (err instanceof Error) {
+        setError(`Failed to post reply: ${err.message}`)
+      } else {
+        setError('Failed to post reply. Please try again.')
+      }
+      setTimeout(() => setError(null), 3000)
       return false
     }
   }
@@ -151,7 +187,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
 
   if (loading) {
     return (
-      <div className="bg-white p-6 shadow-md mb-6">
+      <div className="bg-white p-6 shadow-md mb-6 border-l-4 border-teal-400">
         <div className="h-5 bg-gray-200 rounded w-1/4 mb-4"></div>
         <div className="h-32 bg-gray-100 rounded mb-4"></div>
         <div className="space-y-4">
@@ -163,21 +199,8 @@ export default function CommentSection({ postId }: CommentSectionProps) {
     )
   }
 
-  if (error) {
-    return (
-      <div className="bg-white p-6 border-l-4 border-red-500 shadow-md mb-6">
-        <div className="flex items-center">
-          <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="font-medium">{error}</span>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="bg-white p-6 shadow-md mb-6">
+    <div className="bg-white p-6 shadow-md mb-6 border-l-4 border-teal-400">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">
           Comments ({comments.length})
@@ -196,12 +219,23 @@ export default function CommentSection({ postId }: CommentSectionProps) {
         </div>
       </div>
       
+      {/* Error/Success Display */}
+      {error && (
+        <div className={`mb-4 p-3 rounded text-sm ${
+          error.includes('success') 
+            ? 'bg-green-50 text-green-700 border border-green-200' 
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {error}
+        </div>
+      )}
+      
       {/* Comment form */}
-      <div className="mb-6 border border-gray-200 rounded-md p-3">
+      <div className="mb-6 border-2 border-gray-100 rounded-md p-3 transition-all hover:border-teal-100">
         <h3 className="text-sm font-medium mb-2">Comment as {user ? user.username : 'guest'}</h3>
         <form onSubmit={handleSubmitComment}>
           <textarea
-            className="w-full p-3 border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+            className="w-full p-3 border border-gray-200 rounded focus:border-teal-400 focus:outline-none transition-colors"
             rows={4}
             placeholder={user ? "What are your thoughts?" : "Please sign in to comment"}
             value={commentText}
@@ -211,7 +245,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
           <div className="flex justify-end mt-2">
             <button 
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:bg-gray-400 transition-colors"
               disabled={!user || !commentText.trim() || submitting}
             >
               {submitting ? 'Posting...' : 'Comment'}
@@ -232,7 +266,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
             />
           ))
         ) : (
-          <div className="bg-gray-50 p-6 text-center rounded">
+          <div className="bg-gray-50 p-6 text-center rounded border border-gray-100">
             <p className="text-gray-500">No comments yet. Be the first to comment!</p>
           </div>
         )}

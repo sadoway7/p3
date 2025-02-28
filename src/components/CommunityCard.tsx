@@ -55,7 +55,7 @@ export default function CommunityCard({ community }: CommunityCardProps) {
             to={`/community/${community.id}`}
             className="font-medium text-gray-900 hover:underline"
           >
-            r/{community.name}
+            {community.name}
           </Link>
           <p className="text-sm text-gray-600 mt-1">{community.description}</p>
         </div>

@@ -8,6 +8,13 @@ interface CommunitySettings {
   allow_post_images: boolean;
   allow_post_links: boolean;
   join_method: 'auto_approve' | 'requires_approval' | 'invite_only';
+  require_post_approval: boolean;
+  restricted_words: string | null;
+  custom_theme_color: string | null;
+  custom_banner_url: string | null;
+  minimum_account_age_days: number;
+  minimum_karma_required: number;
+  updated_at: Date;
 }
 
 interface Community {
@@ -83,7 +90,14 @@ export default function CommunitySettings({ communityId }: Props) {
         community_id: community.id,
         allow_post_images: true,
         allow_post_links: true,
-        join_method: 'auto_approve'
+        join_method: 'auto_approve',
+        require_post_approval: false,
+        restricted_words: null,
+        custom_theme_color: null,
+        custom_banner_url: null,
+        minimum_account_age_days: 0,
+        minimum_karma_required: 0,
+        updated_at: new Date()
       });
     }
     

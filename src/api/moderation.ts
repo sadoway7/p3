@@ -90,7 +90,7 @@ export async function isUserModerator(communityId: string, token?: string | null
   }
 }
 
-export async function getEnhancedCommunitySettings(communityId: string, token?: string | null): Promise<CommunitySettings> {
+export async function getCommunitySettings(communityId: string, token?: string | null): Promise<CommunitySettings> {
   const headers: Record<string, string> = {};
   
   if (token) {
@@ -103,12 +103,12 @@ export async function getEnhancedCommunitySettings(communityId: string, token?: 
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Failed to fetch enhanced community settings');
+    throw new Error(errorData.error || 'Failed to fetch community settings');
   }
   return await response.json();
 }
 
-export async function updateEnhancedCommunitySettings(
+export async function updateCommunitySettings(
   communityId: string,
   settings: Partial<CommunitySettings>,
   token?: string | null
@@ -129,10 +129,14 @@ export async function updateEnhancedCommunitySettings(
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Failed to update enhanced community settings');
+    throw new Error(errorData.error || 'Failed to update community settings');
   }
   return await response.json();
 }
+
+// Keep these as aliases for backward compatibility
+export const getEnhancedCommunitySettings = getCommunitySettings;
+export const updateEnhancedCommunitySettings = updateCommunitySettings;
 
 export async function getModeratorPermissions(
   communityId: string, 

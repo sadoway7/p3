@@ -93,19 +93,13 @@ export async function getActivityHistory(entity: 'community' | 'user' | 'post', 
 // Get post comments with error handling
 export async function getPostComments(postId: string, threaded: boolean = false): Promise<any[]> {
   try {
-    // For now, just return an empty array immediately to avoid server errors
-    // This is a temporary measure until backend is fixed
-    return [];
-    
-    /*
-    // Original implementation
+    // Use the actual API endpoint
     const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/comments${threaded ? '?threaded=true' : ''}`);
     if (!response.ok) {
       console.warn(`Error fetching comments for post ${postId}: ${response.status}`);
       return []; // Return empty array on error
     }
     return await response.json();
-    */
   } catch (error) {
     console.warn(`Failed to fetch comments for post ${postId}:`, error);
     return []; // Return empty array on any error

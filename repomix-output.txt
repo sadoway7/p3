@@ -166,6 +166,7 @@ src/components/CommentSection.tsx
 src/components/CommunityAbout.tsx
 src/components/CommunityCard.tsx
 src/components/CommunityDiscovery.tsx
+src/components/CommunityDiscoverySidebar.tsx
 src/components/CommunityHeader.tsx
 src/components/CommunityInfo.tsx
 src/components/CommunityList.tsx
@@ -243,6 +244,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+ARCHIVED
+.git_disabled
 
 ================
 File: backend/.env
@@ -12072,6 +12075,8 @@ export async function rejectJoinRequest(communityId: string, requestId: string, 
 export async function getCommunityAbout(communityId: string) {
     throw new Error('Failed to fetch community about');
 export async function getCommunityModerators(communityId: string, token?: string | null) {
+export async function getCommunityMember(communityId: string, userId: string, token?: string | null) {
+    throw new Error(errorData.error || 'Failed to fetch member status');
 
 ================
 File: src/api/compatibility.ts
@@ -12104,10 +12109,10 @@ export interface BannedUser {
 export interface ModerationLog {
 export interface PendingPost {
 export async function isUserModerator(communityId: string, token?: string | null): Promise<boolean> {
-export async function getEnhancedCommunitySettings(communityId: string, token?: string | null): Promise<CommunitySettings> {
-    throw new Error(errorData.error || 'Failed to fetch enhanced community settings');
-export async function updateEnhancedCommunitySettings(
-    throw new Error(errorData.error || 'Failed to update enhanced community settings');
+export async function getCommunitySettings(communityId: string, token?: string | null): Promise<CommunitySettings> {
+    throw new Error(errorData.error || 'Failed to fetch community settings');
+export async function updateCommunitySettings(
+    throw new Error(errorData.error || 'Failed to update community settings');
 export async function getModeratorPermissions(
     throw new Error(errorData.error || 'Failed to fetch moderator permissions');
 export async function setModeratorPermissions(
@@ -12393,12 +12398,10 @@ export default function CommentSection({ postId }: CommentSectionProps) {
 ================
 File: src/components/CommunityAbout.tsx
 ================
-interface CommunityInfo {
-interface CommunityMember {
+interface CommunityAboutInfo {
 interface Props {
 export default function CommunityAbout({ communityId }: Props) {
     async function fetchData() {
-        <p>Created: {new Date(community.created_at).toLocaleDateString()}</p>
 
 ================
 File: src/components/CommunityCard.tsx
@@ -12410,7 +12413,18 @@ export default function CommunityCard({ community }: CommunityCardProps) {
 ================
 File: src/components/CommunityDiscovery.tsx
 ================
+interface Community {
     const fetchCommunities = async () => {
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  const goToRandomCommunity = () => {
+
+================
+File: src/components/CommunityDiscoverySidebar.tsx
+================
+interface Community {
+    async function fetchData() {
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  const goToRandomCommunity = () => {
 
 ================
 File: src/components/CommunityHeader.tsx
@@ -12467,10 +12481,12 @@ export default function CommunitySearch({ onSearch, onSearchStart, onSearchError
 File: src/components/CommunitySettings.tsx
 ================
 interface CommunitySettings {
+  updated_at: Date;
 interface Community {
 interface Props {
 export default function CommunitySettings({ communityId }: Props) {
     async function fetchData() {
+        updated_at: new Date()
   const handleTogglePrivacy = async () => {
   const handleTogglePostImages = async () => {
   const handleTogglePostLinks = async () => {
@@ -12484,9 +12500,7 @@ File: src/components/CommunitySidebar.tsx
 interface CommunitySidebarProps {
   const checkMembershipStatus = async () => {
   const handleJoinCommunity = async () => {
-        throw new Error('Failed to join community');
   const handleLeaveCommunity = async () => {
-        throw new Error('Failed to leave community');
 
 ================
 File: src/components/CreateCommunityModal.tsx
@@ -12680,11 +12694,23 @@ File: src/main.tsx
 File: src/pages/Communities.tsx
 ================
 interface Community {
+  const toggleCommunityExpansion = (communityId: string) => {
+  const updateCommunitySearchTerm = (communityId: string, term: string) => {
+  const sortCommunities = (sortType: 'trending' | 'new' | 'popular' | 'active') => {
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+  const filterCommunities = (filterType: 'all' | 'public' | 'private') => {
+  const applyFilters = (communitiesToFilter: Community[]) => {
   const fetchCommunities = async () => {
   const handleCommunityCreated = (communityId: string) => {
   const handleSearch = async (e: React.FormEvent) => {
     const handleJoinCommunity = async (communityId: string) => {
-                onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                                    onChange={(e) => updateCommunitySearchTerm(community.id, e.target.value)}
+                        style={{ borderLeftColor: communityColor }}
+                                    Created: <span className="font-medium">{community.created_at ? new Date(community.created_at).toLocaleDateString() : 'recently'}</span>
+                            <div onClick={(e) => e.stopPropagation()}>
 
 ================
 File: src/pages/Community.tsx

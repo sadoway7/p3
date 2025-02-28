@@ -78,7 +78,7 @@ export default function CommunityList({ communities }: CommunityListProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 font-mono">
+    <div className="grid grid-cols-1 gap-3 font-mono">
       {communities.length === 0 ? (
         <div className="col-span-full text-center py-12 bg-black text-white shadow-lg">
           <span className="text-2xl uppercase font-bold tracking-wider">EMPTY</span>
@@ -88,52 +88,61 @@ export default function CommunityList({ communities }: CommunityListProps) {
         communities.map((community, index) => (
           <div
             key={community.id}
-            className={`bg-white p-6 shadow-lg transform hover:translate-x-1 hover:-translate-y-1 transition-transform relative ${index % 2 === 0 ? 'rotate-0.5' : '-rotate-0.5'}`}
+            className="bg-white shadow-md rounded-sm hover:shadow-lg transition-shadow"
           >
-            <div className={`absolute top-0 left-0 w-2 h-full ${getColorClass(index)}`}></div>
-            
-            <div className="flex flex-col md:flex-row md:items-center justify-between">
-              <div className="flex-grow">
-                <Link
-                  to={`/community/${community.id}`}
-                  className="font-bold text-xl hover:text-teal-600 transition-colors inline-block relative"
-                >
-                  r/{community.name}
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-teal-400 via-pink-400 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-                </Link>
-                <p className="text-base mt-3 mb-4 md:mb-0 md:pr-8">{community.description}</p>
-              </div>
-              <div className="flex-shrink-0">
-                <button 
-                  className={`px-6 py-3 text-white text-sm uppercase tracking-wider shadow-md relative overflow-hidden group 
-                    ${joiningMap[community.id] ? 'bg-gray-500 cursor-wait' : 'bg-black hover:bg-gray-800 transition-colors'}`}
-                  onClick={(e) => handleJoin(e, community.id)}
-                  disabled={joiningMap[community.id]}
-                >
-                  <span className="relative z-10">{joiningMap[community.id] ? 'Joining...' : 'Join'}</span>
-                  <span className="absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r from-teal-400 via-pink-400 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-                </button>
-              </div>
-            </div>
-            
-            <div className="mt-5 flex flex-wrap items-center text-sm space-x-6 border-t border-gray-100 pt-4">
-              {community.members !== undefined && (
-                <div className="bg-gray-100 px-3 py-1 shadow-sm">
-                  <span className="font-bold text-teal-600">{community.members}</span> members
-                </div>
-              )}
+            <div className="flex flex-col md:flex-row">
+              {/* Left color strip */}
+              <div className={`w-1 md:w-2 flex-shrink-0 ${getColorClass(index)}`}></div>
               
-              {(community.isPublic === false || community.privacy === 'private') && (
-                <div className="bg-gray-100 px-3 py-1 shadow-sm">
-                  <span className="text-pink-600 font-bold">PRIVATE</span>
+              <div className="flex-grow p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between">
+                  <div className="flex-grow">
+                    <div className="flex items-center mb-1">
+                      <Link
+                        to={`/community/${community.id}`}
+                        className="font-bold text-lg hover:text-teal-600 transition-colors"
+                      >
+                        {community.name}
+                      </Link>
+                      
+                      {/* Privacy tag */}
+                      {(community.isPublic === false || community.privacy === 'private') && (
+                        <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 text-pink-600 font-medium rounded-full">
+                          PRIVATE
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Community stats in a horizontal row */}
+                    <div className="flex items-center text-xs text-gray-500 space-x-3 mb-2">
+                      {community.members !== undefined && (
+                        <div>
+                          <span className="font-medium text-gray-700">{community.members}</span> members
+                        </div>
+                      )}
+                      
+                      {community.created_at && (
+                        <div>
+                          Created <span className="text-gray-700">{new Date(community.created_at).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p className="text-sm text-gray-700 mb-3 md:mb-0 md:pr-8 line-clamp-2">{community.description}</p>
+                  </div>
+                  
+                  <div className="flex-shrink-0 mt-2 md:mt-0">
+                    <button 
+                      className={`px-4 py-1 text-white text-xs uppercase tracking-wider rounded-sm relative overflow-hidden
+                        ${joiningMap[community.id] ? 'bg-gray-400 cursor-wait' : 'bg-black hover:bg-gray-800 transition-colors'}`}
+                      onClick={(e) => handleJoin(e, community.id)}
+                      disabled={joiningMap[community.id]}
+                    >
+                      {joiningMap[community.id] ? 'Joining...' : 'Join'}
+                    </button>
+                  </div>
                 </div>
-              )}
-              
-              {community.created_at && (
-                <div className="text-gray-500">
-                  Created <span className="text-purple-600">{new Date(community.created_at).toLocaleDateString()}</span>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         ))

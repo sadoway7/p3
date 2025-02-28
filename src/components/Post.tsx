@@ -144,15 +144,15 @@ export default function Post({ postId }: PostProps) {
     : 'unknown time'
 
   return (
-    <div className="bg-white p-6 shadow-md mb-6">      
+    <div className="bg-white p-6 shadow-md mb-6 border-l-4 border-teal-400 transform hover:scale-[1.005] transition-transform">      
       <div className="flex">
         {/* Voting */}
         <div className="flex flex-col items-center mr-4">
           <button 
             className={`p-1 rounded transition-colors ${
               userVote === 1 
-                ? 'text-blue-600'
-                : 'text-gray-500 hover:text-blue-600'
+                ? 'text-teal-600'
+                : 'text-gray-400 hover:text-teal-600'
             }`}
             onClick={() => handleVote(1)}
             disabled={voteLoading}
@@ -160,15 +160,15 @@ export default function Post({ postId }: PostProps) {
             <ArrowUp className="w-6 h-6" />
           </button>
           <span className={`font-medium my-1 ${
-            votes > 0 ? 'text-blue-600' : votes < 0 ? 'text-red-600' : 'text-gray-700'
+            votes > 0 ? 'text-teal-600' : votes < 0 ? 'text-pink-600' : 'text-gray-700'
           }`}>
             {votes}
           </span>
           <button 
             className={`p-1 rounded transition-colors transform rotate-180 ${
               userVote === -1 
-                ? 'text-red-600'
-                : 'text-gray-500 hover:text-red-600'
+                ? 'text-pink-600'
+                : 'text-gray-400 hover:text-pink-600'
             }`}
             onClick={() => handleVote(-1)}
             disabled={voteLoading}
@@ -181,9 +181,9 @@ export default function Post({ postId }: PostProps) {
         <div className="flex-1">
           {/* Post metadata */}
           <div className="mb-2 text-sm text-gray-500">
-            {post.community ? (
-              <Link to={`/communities/${post.community_id}`} className="font-medium text-blue-600 hover:underline">
-                r/{post.community}
+            {post.community_name || post.community ? (
+              <Link to={`/community/${post.community_id}`} className="font-medium text-teal-600 hover:underline">
+                r/{post.community_name || post.community}
               </Link>
             ) : (
               <span className="font-medium">Posted by {post.username || 'Anonymous'}</span>
@@ -213,17 +213,17 @@ export default function Post({ postId }: PostProps) {
       
       {/* Post Actions */}
       <div className="mt-4 pt-3 border-t border-gray-100 flex space-x-6">
-        <button className="flex items-center text-gray-500 hover:text-blue-600">
+        <button className="flex items-center text-gray-500 hover:text-teal-600 transition-colors">
           <MessageSquare className="w-5 h-5 mr-1" />
           <span>Comments</span>
         </button>
         
-        <button className="flex items-center text-gray-500 hover:text-green-600">
+        <button className="flex items-center text-gray-500 hover:text-pink-600 transition-colors">
           <Share2 className="w-5 h-5 mr-1" />
           <span>Share</span>
         </button>
         
-        <button className="flex items-center text-gray-500 hover:text-purple-600">
+        <button className="flex items-center text-gray-500 hover:text-purple-600 transition-colors">
           <Bookmark className="w-5 h-5 mr-1" />
           <span>Save</span>
         </button>

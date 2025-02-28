@@ -27,7 +27,8 @@ export async function createCommunity(
   communityData: { 
     name: string, 
     description: string, 
-    privacy: 'public' | 'private' 
+    privacy: 'public' | 'private',
+    creator_id?: string
   },
   token?: string | null
 ) {
@@ -249,7 +250,13 @@ export async function updateCommunitySettings(
   settingsData: {
     allow_post_images?: boolean,
     allow_post_links?: boolean,
-    join_method?: 'auto_approve' | 'requires_approval' | 'invite_only'
+    join_method?: 'auto_approve' | 'requires_approval' | 'invite_only',
+    require_post_approval?: boolean,
+    restricted_words?: string,
+    custom_theme_color?: string,
+    custom_banner_url?: string,
+    minimum_account_age_days?: number,
+    minimum_karma_required?: number,
   },
   token?: string | null
 ) {
@@ -465,4 +472,26 @@ export async function getCommunityModerators(communityId: string, token?: string
     console.error("Error fetching moderators:", error);
     return [];
   }
+}
+
+// Get member status for a specific user in a community
+export async function getCommunityMember(communityId: string, userId: string, token?: string | null) {
+  const headers: Record<string, string> = {};
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
+    headers
+  });
+  
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null; // User is not a member
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to fetch member status');
+  }
+  return await response.json();
 }

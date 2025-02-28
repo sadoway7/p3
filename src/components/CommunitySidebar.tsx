@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CommunityModControls from './CommunityModControls';
+import { joinCommunity, leaveCommunity, getCommunityMember } from '../api/communities';
 
 interface CommunitySidebarProps {
   communityId: string;
@@ -37,18 +38,11 @@ const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
     setLoading(true);
     
     try {
-      // Check if user is a member of the community
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      // Use the imported getCommunityMember function
       console.log(`Checking membership for user ${user.id} in community ${communityId}`);
+      const member = await getCommunityMember(communityId, user.id, token);
       
-      const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const member = await response.json();
+      if (member) {
         console.log("Membership found:", member);
         setIsMember(true);
         setIsModerator(member.role === 'moderator' || member.role === 'admin');
@@ -74,22 +68,9 @@ const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
     
     try {
       // Use the imported joinCommunity function from communities API
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
       console.log(`Attempting to join community ${communityId}`);
       
-      const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to join community');
-      }
-      
-      const result = await response.json();
-      console.log('Join response:', result);
+      await joinCommunity(communityId, token);
       
       // Check the membership status to update state correctly
       await checkMembershipStatus();
@@ -113,18 +94,8 @@ const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
     setLoading(true);
     
     try {
-      // Fix: Use the correct endpoint for leaving a community (without userId)
-      const API_BASE_URL = 'http://localhost:3001';
-      const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to leave community');
-      }
+      // Use the imported leaveCommunity function
+      await leaveCommunity(communityId, undefined, token);
       
       setIsMember(false);
       setIsModerator(false);
