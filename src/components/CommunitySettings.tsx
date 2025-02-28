@@ -75,6 +75,30 @@ export default function CommunitySettings({ communityId }: Props) {
     }
   }, [communityId, user, token]);
 
+  // Create default data when only partial data is available
+  useEffect(() => {
+    if (!settings && community) {
+      // Create default settings to display
+      setSettings({
+        community_id: community.id,
+        allow_post_images: true,
+        allow_post_links: true,
+        join_method: 'auto_approve'
+      });
+    }
+    
+    // If we have settings but no community data
+    if (settings && !community) {
+      // Create basic community info
+      setCommunity({
+        id: communityId,
+        name: 'Community',
+        description: 'No description available',
+        privacy: 'public'
+      });
+    }
+  }, [settings, community, communityId]);
+
   const handleTogglePrivacy = async () => {
     if (!community) return;
     
@@ -152,30 +176,6 @@ export default function CommunitySettings({ communityId }: Props) {
       </div>
     );
   }
-  
-  // If we have at least community data, we can show basic settings
-  useEffect(() => {
-    if (!settings && community) {
-      // Create default settings to display
-      setSettings({
-        community_id: community.id,
-        allow_post_images: true,
-        allow_post_links: true,
-        join_method: 'auto_approve'
-      });
-    }
-    
-    // If we have settings but no community data
-    if (settings && !community) {
-      // Create basic community info
-      setCommunity({
-        id: communityId,
-        name: 'Community',
-        description: 'No description available',
-        privacy: 'public'
-      });
-    }
-  }, [settings, community, communityId]);
 
   const handleJoinMethodChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (!settings) return;

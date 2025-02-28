@@ -56,29 +56,32 @@ export interface CommunitySettings {
     community_id: string;
     allow_post_images: boolean;
     allow_post_links: boolean;
-    allow_post_videos: boolean;
-    allow_polls: boolean;
-    require_post_flair: boolean;
-    show_in_discovery: boolean;
     join_method: 'auto_approve' | 'requires_approval' | 'invite_only';
-    content_filter_level: 'none' | 'low' | 'medium' | 'high';
+    require_post_approval: boolean;
+    restricted_words: string | null;
+    custom_theme_color: string | null;
+    custom_banner_url: string | null;
+    minimum_account_age_days: number;
+    minimum_karma_required: number;
     updated_at: Date;
 }
 
 export interface CommunitySettingsInput {
     allow_post_images?: boolean;
     allow_post_links?: boolean;
-    allow_post_videos?: boolean;
-    allow_polls?: boolean;
-    require_post_flair?: boolean;
-    show_in_discovery?: boolean;
     join_method?: 'auto_approve' | 'requires_approval' | 'invite_only';
-    content_filter_level?: 'none' | 'low' | 'medium' | 'high';
+    require_post_approval?: boolean;
+    restricted_words?: string;
+    custom_theme_color?: string;
+    custom_banner_url?: string;
+    minimum_account_age_days?: number;
+    minimum_karma_required?: number;
 }
 
 export interface CommunityMember {
     community_id: string;
     user_id: string;
+    username: string;
     role: 'member' | 'moderator' | 'admin';
     joined_at: Date;
 }
@@ -92,7 +95,6 @@ export interface JoinRequest {
     updated_at: Date;
 }
 
-// Community CRUD operations
 export async function getCommunities(): Promise<Community[]> {
     let conn;
     try {
@@ -149,32 +151,47 @@ export async function createCommunity(communityData: CommunityInput): Promise<Co
         // Create default settings for the community
         await conn.query(
             `INSERT INTO community_setting (
-                community_id, allow_post_images, allow_post_links, allow_post_videos,
-                allow_polls, require_post_flair, show_in_discovery,
-                join_method, content_filter_level
-            ) VALUES (?, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, 'auto_approve', 'none')`,
-            [id]
+                community_id, allow_post_images, allow_post_links, join_method,
+                require_post_approval, restricted_words, custom_theme_color,
+                custom_banner_url, minimum_account_age_days, minimum_karma_required,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [
+                id,
+                true, // allow_post_images
+                true, // allow_post_links
+                'auto_approve', // join_method
+                false, // require_post_approval
+                null, // restricted_words
+                null, // custom_theme_color
+                null, // custom_banner_url
+                0, // minimum_account_age_days
+                0, // minimum_karma_required
+            ]
         );
         
-        // Log activity if creator_id is provided
-        if (communityData.creator_id) {
-            const activityId = uuidv4();
-            await conn.query(
-                `INSERT INTO activity (
-                    id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
-                ) VALUES (
-                    ?, ?, 
-                    (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                    (SELECT id FROM action WHERE name = 'CREATE'),
-                    ?, 'community', NOW()
-                )`,
-                [activityId, communityData.creator_id, id]
-            );
-        }
+        // Log the activity
+        const activityId = uuidv4();
+        await conn.query(
+            `INSERT INTO activity (
+                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+            ) VALUES (
+                ?, ?, 
+                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                (SELECT id FROM action WHERE name = 'CREATE'),
+                ?, 'community', NOW()
+            )`,
+            [
+                activityId, 
+                communityData.creator_id || null, 
+                id
+            ]
+        );
         
         // Commit the transaction
         await conn.commit();
         
+        // Return the created community
         const [newCommunity] = await conn.query("SELECT * FROM community WHERE id = ?", [id]);
         return newCommunity;
     } catch (error) {
@@ -247,19 +264,25 @@ export async function updateCommunity(communityId: string, communityData: Partia
         const activityId = uuidv4();
         await conn.query(
             `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
             ) VALUES (
                 ?, ?, 
                 (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
                 (SELECT id FROM action WHERE name = 'UPDATE'),
-                ?, 'community', NOW()
+                ?, 'community', ?, NOW()
             )`,
-            [activityId, userId, communityId]
+            [
+                activityId, 
+                userId, 
+                communityId, 
+                JSON.stringify(communityData)
+            ]
         );
         
         // Commit the transaction
         await conn.commit();
         
+        // Return the updated community
         return await getCommunity(communityId);
     } catch (error) {
         console.error("Error updating community:", error);
@@ -277,22 +300,10 @@ export async function deleteCommunity(communityId: string, userId: string): Prom
     try {
         conn = await pool.getConnection();
         
-        // Start a transaction to ensure all related data is deleted
+        // Start a transaction
         await conn.beginTransaction();
         
-        // Delete community settings
-        await conn.query("DELETE FROM community_setting WHERE community_id = ?", [communityId]);
-        
-        // Delete community rules
-        await conn.query("DELETE FROM community_rule WHERE community_id = ?", [communityId]);
-        
-        // Delete community members
-        await conn.query("DELETE FROM community_member WHERE community_id = ?", [communityId]);
-        
-        // Delete join requests
-        await conn.query("DELETE FROM community_join_request WHERE community_id = ?", [communityId]);
-        
-        // Log activity before deleting the community
+        // Log activity before deletion
         const activityId = uuidv4();
         await conn.query(
             `INSERT INTO activity (
@@ -335,7 +346,7 @@ export async function getCommunityRules(communityId: string): Promise<CommunityR
     try {
         conn = await pool.getConnection();
         const rules = await conn.query(
-            "SELECT * FROM community_rule WHERE community_id = ? ORDER BY position ASC",
+            "SELECT * FROM community_rule WHERE community_id = ?",
             [communityId]
         );
         return rules;
@@ -356,16 +367,16 @@ export async function addCommunityRule(communityId: string, ruleData: CommunityR
         // Start a transaction
         await conn.beginTransaction();
         
-        // Get the highest position to determine the next position
-        const [positionResult] = await conn.query(
-            "SELECT MAX(position) as maxPosition FROM community_rule WHERE community_id = ?",
-            [communityId]
-        );
-        const nextPosition = (positionResult.maxPosition || 0) + 1;
-        
         await conn.query(
-            "INSERT INTO community_rule (id, community_id, title, description, position) VALUES (?, ?, ?, ?, ?)",
-            [id, communityId, ruleData.title, ruleData.description, ruleData.position || nextPosition]
+            `INSERT INTO community_rule (
+                id, community_id, title, description, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, NOW(), NOW())`,
+            [
+                id,
+                communityId,
+                ruleData.title,
+                ruleData.description
+            ]
         );
         
         // Log activity
@@ -421,11 +432,6 @@ export async function updateCommunityRule(ruleId: string, ruleData: Partial<Comm
         if (ruleData.description !== undefined) {
             updates.push("description = ?");
             values.push(ruleData.description);
-        }
-        
-        if (ruleData.position !== undefined) {
-            updates.push("position = ?");
-            values.push(ruleData.position);
         }
         
         if (updates.length === 0) {
@@ -541,32 +547,11 @@ export async function getCommunitySettings(communityId: string): Promise<Communi
     let conn;
     try {
         conn = await pool.getConnection();
-        
-        // Get settings from the community_setting table
         const [settings] = await conn.query(
             "SELECT * FROM community_setting WHERE community_id = ?",
             [communityId]
         );
-        
-        // If settings don't exist, create default settings
-        if (!settings) {
-            await conn.query(
-                `INSERT INTO community_setting (
-                    community_id, allow_post_images, allow_post_links, allow_post_videos,
-                    allow_polls, require_post_flair, show_in_discovery,
-                    join_method, content_filter_level
-                ) VALUES (?, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, 'auto_approve', 'none')`,
-                [communityId]
-            );
-            
-            const [newSettings] = await conn.query(
-                "SELECT * FROM community_setting WHERE community_id = ?",
-                [communityId]
-            );
-            return newSettings;
-        }
-        
-        return settings;
+        return settings || null;
     } catch (error) {
         console.error("Error fetching community settings:", error);
         throw new Error('Failed to fetch community settings');
@@ -590,23 +575,25 @@ export async function updateCommunitySettings(communityId: string, settingsData:
         );
         
         if (!existingSettings) {
-            // Create settings if they don't exist
+            // Create default settings
             await conn.query(
                 `INSERT INTO community_setting (
-                    community_id, allow_post_images, allow_post_links, allow_post_videos,
-                    allow_polls, require_post_flair, show_in_discovery,
-                    join_method, content_filter_level
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    community_id, allow_post_images, allow_post_links, join_method,
+                    require_post_approval, restricted_words, custom_theme_color,
+                    custom_banner_url, minimum_account_age_days, minimum_karma_required,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
                 [
                     communityId,
                     settingsData.allow_post_images !== undefined ? settingsData.allow_post_images : true,
                     settingsData.allow_post_links !== undefined ? settingsData.allow_post_links : true,
-                    settingsData.allow_post_videos !== undefined ? settingsData.allow_post_videos : true,
-                    settingsData.allow_polls !== undefined ? settingsData.allow_polls : true,
-                    settingsData.require_post_flair !== undefined ? settingsData.require_post_flair : false,
-                    settingsData.show_in_discovery !== undefined ? settingsData.show_in_discovery : true,
-                    settingsData.join_method !== undefined ? settingsData.join_method : 'auto_approve',
-                    settingsData.content_filter_level !== undefined ? settingsData.content_filter_level : 'none'
+                    settingsData.join_method || 'auto_approve',
+                    settingsData.require_post_approval !== undefined ? settingsData.require_post_approval : false,
+                    settingsData.restricted_words || null,
+                    settingsData.custom_theme_color || null,
+                    settingsData.custom_banner_url || null,
+                    settingsData.minimum_account_age_days !== undefined ? settingsData.minimum_account_age_days : 0,
+                    settingsData.minimum_karma_required !== undefined ? settingsData.minimum_karma_required : 0
                 ]
             );
         } else {
@@ -624,38 +611,43 @@ export async function updateCommunitySettings(communityId: string, settingsData:
                 values.push(settingsData.allow_post_links);
             }
             
-            if (settingsData.allow_post_videos !== undefined) {
-                updates.push("allow_post_videos = ?");
-                values.push(settingsData.allow_post_videos);
-            }
-            
-            if (settingsData.allow_polls !== undefined) {
-                updates.push("allow_polls = ?");
-                values.push(settingsData.allow_polls);
-            }
-            
-            if (settingsData.require_post_flair !== undefined) {
-                updates.push("require_post_flair = ?");
-                values.push(settingsData.require_post_flair);
-            }
-            
-            if (settingsData.show_in_discovery !== undefined) {
-                updates.push("show_in_discovery = ?");
-                values.push(settingsData.show_in_discovery);
-            }
-            
             if (settingsData.join_method !== undefined) {
                 updates.push("join_method = ?");
                 values.push(settingsData.join_method);
             }
             
-            if (settingsData.content_filter_level !== undefined) {
-                updates.push("content_filter_level = ?");
-                values.push(settingsData.content_filter_level);
+            if (settingsData.require_post_approval !== undefined) {
+                updates.push("require_post_approval = ?");
+                values.push(settingsData.require_post_approval);
+            }
+            
+            if (settingsData.restricted_words !== undefined) {
+                updates.push("restricted_words = ?");
+                values.push(settingsData.restricted_words);
+            }
+            
+            if (settingsData.custom_theme_color !== undefined) {
+                updates.push("custom_theme_color = ?");
+                values.push(settingsData.custom_theme_color);
+            }
+            
+            if (settingsData.custom_banner_url !== undefined) {
+                updates.push("custom_banner_url = ?");
+                values.push(settingsData.custom_banner_url);
+            }
+            
+            if (settingsData.minimum_account_age_days !== undefined) {
+                updates.push("minimum_account_age_days = ?");
+                values.push(settingsData.minimum_account_age_days);
+            }
+            
+            if (settingsData.minimum_karma_required !== undefined) {
+                updates.push("minimum_karma_required = ?");
+                values.push(settingsData.minimum_karma_required);
             }
             
             if (updates.length > 0) {
-                // Add the community ID to the values array
+                // Add the ID to the values array
                 values.push(communityId);
                 
                 await conn.query(
@@ -669,25 +661,26 @@ export async function updateCommunitySettings(communityId: string, settingsData:
         const activityId = uuidv4();
         await conn.query(
             `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
             ) VALUES (
                 ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_SETTING'),
-                (SELECT id FROM action WHERE name = 'UPDATE'),
-                ?, 'community_setting', NOW()
+                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                (SELECT id FROM action WHERE name = 'UPDATE_SETTINGS'),
+                ?, 'community', ?, NOW()
             )`,
-            [activityId, userId, communityId]
+            [
+                activityId, 
+                userId, 
+                communityId, 
+                JSON.stringify(settingsData)
+            ]
         );
         
         // Commit the transaction
         await conn.commit();
         
         // Return the updated settings
-        const [updatedSettings] = await conn.query(
-            "SELECT * FROM community_setting WHERE community_id = ?",
-            [communityId]
-        );
-        return updatedSettings;
+        return await getCommunitySettings(communityId);
     } catch (error) {
         console.error("Error updating community settings:", error);
         if (conn) {
@@ -705,7 +698,10 @@ export async function getCommunityMembers(communityId: string): Promise<Communit
     try {
         conn = await pool.getConnection();
         const members = await conn.query(
-            "SELECT * FROM community_member WHERE community_id = ?",
+            `SELECT cm.*, u.username 
+             FROM community_member cm
+             JOIN user u ON cm.user_id = u.id
+             WHERE cm.community_id = ?`,
             [communityId]
         );
         return members;
@@ -725,14 +721,14 @@ export async function addCommunityMember(communityId: string, userId: string, ro
         // Start a transaction
         await conn.beginTransaction();
         
-        // Check if the member already exists
+        // Check if user is already a member
         const [existingMember] = await conn.query(
             "SELECT * FROM community_member WHERE community_id = ? AND user_id = ?",
             [communityId, userId]
         );
         
         if (existingMember) {
-            // If the member already exists, update their role if different
+            // Just update their role if needed
             if (existingMember.role !== role) {
                 await conn.query(
                     "UPDATE community_member SET role = ? WHERE community_id = ? AND user_id = ?",
@@ -740,23 +736,45 @@ export async function addCommunityMember(communityId: string, userId: string, ro
                 );
             }
             
+            // If they had a pending join request, mark it as approved
+            await conn.query(
+                "UPDATE community_join_request SET status = 'approved', updated_at = NOW() WHERE community_id = ? AND user_id = ? AND status = 'pending'",
+                [communityId, userId]
+            );
+            
+            // Get user details
+            const [user] = await conn.query(
+                "SELECT username FROM user WHERE id = ?",
+                [userId]
+            );
+            
             // Commit the transaction
             await conn.commit();
             
-            return existingMember;
+            return {
+                community_id: communityId,
+                user_id: userId,
+                username: user.username,
+                role: role,
+                joined_at: existingMember.joined_at
+            };
         }
         
-        // Add the new member
+        // Insert new member
         await conn.query(
-            "INSERT INTO community_member (community_id, user_id, role) VALUES (?, ?, ?)",
+            "INSERT INTO community_member (community_id, user_id, role, joined_at) VALUES (?, ?, ?, NOW())",
             [communityId, userId, role]
         );
         
-        // Update user statistics
+        // If they had a pending join request, mark it as approved
         await conn.query(
-            `UPDATE user_statistic 
-             SET communities_joined = communities_joined + 1
-             WHERE user_id = ?`,
+            "UPDATE community_join_request SET status = 'approved', updated_at = NOW() WHERE community_id = ? AND user_id = ? AND status = 'pending'",
+            [communityId, userId]
+        );
+        
+        // Get user details
+        const [user] = await conn.query(
+            "SELECT username FROM user WHERE id = ?",
             [userId]
         );
         
@@ -764,24 +782,37 @@ export async function addCommunityMember(communityId: string, userId: string, ro
         const activityId = uuidv4();
         await conn.query(
             `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
             ) VALUES (
                 ?, ?, 
                 (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
                 (SELECT id FROM action WHERE name = 'JOIN'),
-                ?, 'community', NOW()
+                ?, 'community', ?, NOW()
             )`,
-            [activityId, userId, communityId]
+            [
+                activityId, 
+                userId, 
+                communityId, 
+                JSON.stringify({ role })
+            ]
+        );
+        
+        // Update user statistics
+        await conn.query(
+            "UPDATE user_statistic SET communities_joined = communities_joined + 1 WHERE user_id = ?",
+            [userId]
         );
         
         // Commit the transaction
         await conn.commit();
         
-        const [newMember] = await conn.query(
-            "SELECT * FROM community_member WHERE community_id = ? AND user_id = ?",
-            [communityId, userId]
-        );
-        return newMember;
+        return {
+            community_id: communityId,
+            user_id: userId,
+            username: user.username,
+            role,
+            joined_at: new Date()
+        };
     } catch (error) {
         console.error("Error adding community member:", error);
         if (conn) {
@@ -801,11 +832,40 @@ export async function updateCommunityMemberRole(communityId: string, userId: str
         // Start a transaction
         await conn.beginTransaction();
         
-        // Update the member's role
+        // Check if member exists
+        const [existingMember] = await conn.query(
+            "SELECT * FROM community_member WHERE community_id = ? AND user_id = ?",
+            [communityId, userId]
+        );
+        
+        if (!existingMember) {
+            return null;
+        }
+        
+        // Update role
         await conn.query(
             "UPDATE community_member SET role = ? WHERE community_id = ? AND user_id = ?",
             [role, communityId, userId]
         );
+        
+        // If promoting to moderator, add default permissions
+        if (role === 'moderator' && existingMember.role !== 'moderator' && existingMember.role !== 'admin') {
+            try {
+                await conn.query(
+                    `INSERT INTO moderator_permission (
+                        community_id, user_id, 
+                        can_manage_settings, can_manage_members, can_manage_posts, can_manage_comments,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                    [communityId, userId, true, true, true, true]
+                );
+            } catch (error) {
+                // Ignore duplicate key errors (might already have permissions from before)
+                if (error.code !== 'ER_DUP_ENTRY') {
+                    throw error;
+                }
+            }
+        }
         
         // Log activity
         const activityId = uuidv4();
@@ -814,31 +874,34 @@ export async function updateCommunityMemberRole(communityId: string, userId: str
                 id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
             ) VALUES (
                 ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_MEMBER'),
-                (SELECT id FROM action WHERE name = 'UPDATE'),
-                ?, 'community_member', ?, NOW()
+                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                (SELECT id FROM action WHERE name = 'UPDATE_MEMBER_ROLE'),
+                ?, 'community', ?, NOW()
             )`,
             [
                 activityId, 
                 updatedBy, 
-                userId, 
-                JSON.stringify({ 
-                    community_id: communityId,
-                    user_id: userId,
-                    new_role: role
-                })
+                communityId, 
+                JSON.stringify({ user_id: userId, role })
             ]
         );
         
         // Commit the transaction
         await conn.commit();
         
-        // Return the updated member
-        const [updatedMember] = await conn.query(
-            "SELECT * FROM community_member WHERE community_id = ? AND user_id = ?",
-            [communityId, userId]
+        // Get user details
+        const [user] = await conn.query(
+            "SELECT username FROM user WHERE id = ?",
+            [userId]
         );
-        return updatedMember || null;
+        
+        return {
+            community_id: communityId,
+            user_id: userId,
+            username: user.username,
+            role,
+            joined_at: existingMember.joined_at
+        };
     } catch (error) {
         console.error("Error updating community member role:", error);
         if (conn) {
@@ -858,45 +921,54 @@ export async function removeCommunityMember(communityId: string, userId: string)
         // Start a transaction
         await conn.beginTransaction();
         
-        // Log activity before removing the member
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'LEAVE'),
-                ?, 'community', ?, NOW()
-            )`,
-            [
-                activityId, 
-                userId, 
-                communityId, 
-                JSON.stringify({ community_id: communityId })
-            ]
+        // Check if member exists
+        const [existingMember] = await conn.query(
+            "SELECT * FROM community_member WHERE community_id = ? AND user_id = ?",
+            [communityId, userId]
         );
         
-        // Remove the member
-        const result = await conn.query(
+        if (!existingMember) {
+            return false;
+        }
+        
+        // Remove member
+        await conn.query(
             "DELETE FROM community_member WHERE community_id = ? AND user_id = ?",
             [communityId, userId]
         );
         
-        // Update user statistics
-        if (result.affectedRows > 0) {
+        // Also remove any moderator permissions
+        if (existingMember.role === 'moderator' || existingMember.role === 'admin') {
             await conn.query(
-                `UPDATE user_statistic 
-                 SET communities_joined = GREATEST(communities_joined - 1, 0)
-                 WHERE user_id = ?`,
-                [userId]
+                "DELETE FROM moderator_permission WHERE community_id = ? AND user_id = ?",
+                [communityId, userId]
             );
         }
+        
+        // Log activity
+        const activityId = uuidv4();
+        await conn.query(
+            `INSERT INTO activity (
+                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+            ) VALUES (
+                ?, ?, 
+                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                (SELECT id FROM action WHERE name = 'LEAVE'),
+                ?, 'community', NOW()
+            )`,
+            [activityId, userId, communityId]
+        );
+        
+        // Update user statistics
+        await conn.query(
+            "UPDATE user_statistic SET communities_joined = GREATEST(0, communities_joined - 1) WHERE user_id = ?",
+            [userId]
+        );
         
         // Commit the transaction
         await conn.commit();
         
-        return result.affectedRows > 0;
+        return true;
     } catch (error) {
         console.error("Error removing community member:", error);
         if (conn) {
@@ -951,88 +1023,54 @@ export async function getJoinRequests(communityId: string, status?: 'pending' | 
     }
 }
 
-export async function getJoinRequest(requestId: string): Promise<JoinRequest | null> {
-    let conn;
-    try {
-        conn = await pool.getConnection();
-        const [request] = await conn.query(
-            "SELECT * FROM community_join_request WHERE id = ?",
-            [requestId]
-        );
-        return request || null;
-    } catch (error) {
-        console.error("Error fetching join request:", error);
-        throw new Error('Failed to fetch join request');
-    } finally {
-        if (conn) conn.end();
-    }
-}
-
 export async function createJoinRequest(communityId: string, userId: string): Promise<JoinRequest> {
     let conn;
     try {
         const id = uuidv4();
         conn = await pool.getConnection();
         
-        // Start a transaction
-        await conn.beginTransaction();
+        // Check if user is already a member
+        const [existingMember] = await conn.query(
+            "SELECT * FROM community_member WHERE community_id = ? AND user_id = ?",
+            [communityId, userId]
+        );
         
-        // Check if a request already exists
+        if (existingMember) {
+            throw new Error('User is already a member of this community');
+        }
+        
+        // Check if request already exists
         const [existingRequest] = await conn.query(
             "SELECT * FROM community_join_request WHERE community_id = ? AND user_id = ? AND status = 'pending'",
             [communityId, userId]
         );
         
         if (existingRequest) {
-            // If a pending request already exists, return it
-            await conn.commit();
-            return existingRequest;
+            throw new Error('Join request already exists');
         }
         
-        // Create a new join request
+        // Create join request
         await conn.query(
-            "INSERT INTO community_join_request (id, community_id, user_id, status) VALUES (?, ?, ?, 'pending')",
+            "INSERT INTO community_join_request (id, community_id, user_id, status, requested_at, updated_at) VALUES (?, ?, ?, 'pending', NOW(), NOW())",
             [id, communityId, userId]
         );
         
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_JOIN_REQUEST'),
-                (SELECT id FROM action WHERE name = 'CREATE'),
-                ?, 'community_join_request', NOW()
-            )`,
-            [activityId, userId, id]
-        );
-        
-        // Commit the transaction
-        await conn.commit();
-        
+        // Get the created request
         const [newRequest] = await conn.query(
             "SELECT * FROM community_join_request WHERE id = ?",
             [id]
         );
+        
         return newRequest;
     } catch (error) {
         console.error("Error creating join request:", error);
-        if (conn) {
-            await conn.rollback();
-        }
-        throw new Error('Failed to create join request');
+        throw error;
     } finally {
         if (conn) conn.end();
     }
 }
 
-export async function updateJoinRequestStatus(
-    requestId: string, 
-    status: 'approved' | 'rejected', 
-    updatedBy: string
-): Promise<JoinRequest | null> {
+export async function updateJoinRequest(requestId: string, status: 'approved' | 'rejected', moderatorId: string): Promise<JoinRequest | null> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -1040,15 +1078,13 @@ export async function updateJoinRequestStatus(
         // Start a transaction
         await conn.beginTransaction();
         
-        // Get the current request to check if it's pending
+        // Get the request
         const [request] = await conn.query(
             "SELECT * FROM community_join_request WHERE id = ?",
             [requestId]
         );
         
-        if (!request || request.status !== 'pending') {
-            // Only pending requests can be updated
-            await conn.rollback();
+        if (!request) {
             return null;
         }
         
@@ -1060,19 +1096,7 @@ export async function updateJoinRequestStatus(
         
         // If approved, add the user as a community member
         if (status === 'approved') {
-            await conn.query(
-                "INSERT INTO community_member (community_id, user_id, role) VALUES (?, ?, 'member') " +
-                "ON DUPLICATE KEY UPDATE role = 'member'",
-                [request.community_id, request.user_id]
-            );
-            
-            // Update user statistics
-            await conn.query(
-                `UPDATE user_statistic 
-                 SET communities_joined = communities_joined + 1
-                 WHERE user_id = ?`,
-                [request.user_id]
-            );
+            await addCommunityMember(request.community_id, request.user_id, 'member');
         }
         
         // Log activity
@@ -1082,30 +1106,28 @@ export async function updateJoinRequestStatus(
                 id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
             ) VALUES (
                 ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_JOIN_REQUEST'),
-                (SELECT id FROM action WHERE name = 'UPDATE'),
+                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                (SELECT id FROM action WHERE name = ?),
                 ?, 'community_join_request', ?, NOW()
             )`,
             [
                 activityId, 
-                updatedBy, 
+                moderatorId, 
+                status === 'approved' ? 'APPROVE' : 'REJECT',
                 requestId, 
-                JSON.stringify({ 
-                    community_id: request.community_id,
-                    user_id: request.user_id,
-                    status: status
-                })
+                JSON.stringify({ community_id: request.community_id, user_id: request.user_id })
             ]
         );
         
         // Commit the transaction
         await conn.commit();
         
-        // Return the updated request
+        // Get the updated request
         const [updatedRequest] = await conn.query(
             "SELECT * FROM community_join_request WHERE id = ?",
             [requestId]
         );
+        
         return updatedRequest || null;
     } catch (error) {
         console.error("Error updating join request:", error);
@@ -1118,97 +1140,12 @@ export async function updateJoinRequestStatus(
     }
 }
 
-export async function deleteJoinRequest(requestId: string, userId: string): Promise<boolean> {
+export async function getCommunityAbout(communityId: string): Promise<any | null> {
     let conn;
     try {
         conn = await pool.getConnection();
         
-        // Start a transaction
-        await conn.beginTransaction();
-        
-        // Get the request to log its details
-        const [request] = await conn.query(
-            "SELECT * FROM community_join_request WHERE id = ?",
-            [requestId]
-        );
-        
-        if (!request) {
-            return false;
-        }
-        
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_JOIN_REQUEST'),
-                (SELECT id FROM action WHERE name = 'DELETE'),
-                ?, 'community_join_request', ?, NOW()
-            )`,
-            [
-                activityId, 
-                userId, 
-                requestId, 
-                JSON.stringify({ 
-                    community_id: request.community_id,
-                    user_id: request.user_id
-                })
-            ]
-        );
-        
-        // Delete the request
-        const result = await conn.query(
-            "DELETE FROM community_join_request WHERE id = ?",
-            [requestId]
-        );
-        
-        // Commit the transaction
-        await conn.commit();
-        
-        return result.affectedRows > 0;
-    } catch (error) {
-        console.error("Error deleting join request:", error);
-        if (conn) {
-            await conn.rollback();
-        }
-        throw new Error('Failed to delete join request');
-    } finally {
-        if (conn) conn.end();
-    }
-}
-
-export async function getUserJoinRequests(userId: string, status?: 'pending' | 'approved' | 'rejected'): Promise<JoinRequest[]> {
-    let conn;
-    try {
-        conn = await pool.getConnection();
-        
-        let query = "SELECT * FROM community_join_request WHERE user_id = ?";
-        const params: any[] = [userId];
-        
-        if (status) {
-            query += " AND status = ?";
-            params.push(status);
-        }
-        
-        const requests = await conn.query(query, params);
-        return requests;
-    } catch (error) {
-        console.error("Error fetching user join requests:", error);
-        throw new Error('Failed to fetch user join requests');
-    } finally {
-        if (conn) conn.end();
-    }
-}
-
-// Enhanced community information
-export async function getCommunityAbout(communityId: string): Promise<any> {
-    let conn;
-    try {
-        conn = await pool.getConnection();
-        
-        // Get the community
+        // Get community details
         const [community] = await conn.query(
             "SELECT * FROM community WHERE id = ?",
             [communityId]
@@ -1218,33 +1155,41 @@ export async function getCommunityAbout(communityId: string): Promise<any> {
             return null;
         }
         
-        // Get the member count
-        const [memberCountResult] = await conn.query(
-            "SELECT COUNT(*) as memberCount FROM community_member WHERE community_id = ?",
-            [communityId]
-        );
-        const memberCount = memberCountResult.memberCount || 0;
-        
-        // Get the post count
-        const [postCountResult] = await conn.query(
-            "SELECT COUNT(*) as postCount FROM post WHERE community_id = ?",
-            [communityId]
-        );
-        const postCount = postCountResult.postCount || 0;
-        
-        // Get the moderators
+        // Get moderators
         const moderators = await conn.query(
-            "SELECT user_id FROM community_member WHERE community_id = ? AND role IN ('moderator', 'admin')",
+            `SELECT cm.*, u.username 
+             FROM community_member cm
+             JOIN user u ON cm.user_id = u.id
+             WHERE cm.community_id = ? AND cm.role IN ('moderator', 'admin')`,
             [communityId]
         );
-        const moderatorIds = moderators.map((mod: any) => mod.user_id);
         
-        // Return the enhanced community information
+        // Get member count
+        const [memberCountRow] = await conn.query(
+            "SELECT COUNT(*) as count FROM community_member WHERE community_id = ?",
+            [communityId]
+        );
+        
+        // Get post count
+        const [postCountRow] = await conn.query(
+            "SELECT COUNT(*) as count FROM post WHERE community_id = ?",
+            [communityId]
+        );
+        
+        // Get creation date and format it
+        const creationDate = new Date(community.created_at);
+        const creationDateString = creationDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
         return {
             ...community,
-            memberCount,
-            postCount,
-            moderators: moderatorIds
+            moderators,
+            memberCount: memberCountRow.count,
+            postCount: postCountRow.count,
+            creationDateFormatted: creationDateString
         };
     } catch (error) {
         console.error("Error fetching community about:", error);
@@ -1258,16 +1203,13 @@ export async function getUserCommunities(userId: string): Promise<Community[]> {
     let conn;
     try {
         conn = await pool.getConnection();
-        
-        // Get the communities the user is a member of
         const communities = await conn.query(
-            `SELECT c.* 
+            `SELECT c.*, cm.role
              FROM community c
              JOIN community_member cm ON c.id = cm.community_id
              WHERE cm.user_id = ?`,
             [userId]
         );
-        
         return communities;
     } catch (error) {
         console.error("Error fetching user communities:", error);
@@ -1277,16 +1219,19 @@ export async function getUserCommunities(userId: string): Promise<Community[]> {
     }
 }
 
-export async function searchCommunities(searchTerm: string): Promise<Community[]> {
+export async function searchCommunities(query: string): Promise<Community[]> {
     let conn;
     try {
         conn = await pool.getConnection();
         
-        // Search for communities by name or description
+        // Prepare the search query - simple LIKE search for now
+        const searchPattern = `%${query}%`;
+        
         const communities = await conn.query(
             `SELECT * FROM community 
-             WHERE name LIKE ? OR description LIKE ?`,
-            [`%${searchTerm}%`, `%${searchTerm}%`]
+             WHERE name LIKE ? OR description LIKE ? 
+             ORDER BY name`,
+            [searchPattern, searchPattern]
         );
         
         return communities;
