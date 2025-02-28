@@ -18,9 +18,10 @@ interface PostItemProps {
     community_name?: string;
   };
   communityId?: string | null;
+  compact?: boolean;
 }
 
-export default function PostItem({ post, communityId }: PostItemProps) {
+export default function PostItem({ post, communityId, compact = false }: PostItemProps) {
   const { user, token } = useAuth();
   const [votes, setVotes] = useState(post.votes || 0);
   const [userVote, setUserVote] = useState(0); // 0 = no vote, 1 = upvote, -1 = downvote
@@ -74,6 +75,26 @@ export default function PostItem({ post, communityId }: PostItemProps) {
     }
   };
 
+  // Render a more compact version when compact prop is true
+  if (compact) {
+    return (
+      <div className="bg-white p-2 shadow-sm rounded-sm border-l-2 border-purple-400 hover:border-l-4 transition-all">
+        <Link 
+          to={`/post/${post.id}`} 
+          className="block hover:text-purple-600 transition-colors"
+        >
+          <h3 className="font-medium text-sm text-gray-900 truncate">{post.title}</h3>
+        </Link>
+        <div className="text-xs text-gray-500 flex items-center mt-1">
+          <span>{votes} votes</span>
+          <span className="mx-1">•</span>
+          <span>{post.comments} comments</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular post card
   return (
     <div className="bg-white p-4 shadow-sm rounded-sm transform hover:scale-[1.01] transition-transform border-l-4 border-teal-400">
       <div className="flex items-start space-x-4">

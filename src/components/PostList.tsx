@@ -19,9 +19,11 @@ interface Post {
 interface PostListProps {
   communityId?: string | null;
   postType?: 'trending' | 'all' | 'following';
+  maxPosts?: number;
+  compact?: boolean;
 }
 
-export default function PostList({ communityId, postType = 'all' }: PostListProps) {
+export default function PostList({ communityId, postType = 'all', maxPosts, compact = false }: PostListProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,13 +135,17 @@ export default function PostList({ communityId, postType = 'all' }: PostListProp
     );
   }
 
+  // Apply maxPosts limit if provided
+  const displayPosts = maxPosts ? posts.slice(0, maxPosts) : posts;
+
   return (
-    <div className="space-y-4">
-      {posts.map(post => (
+    <div className={`${compact ? 'space-y-1' : 'space-y-4'}`}>
+      {displayPosts.map(post => (
         <PostItem 
           key={post.id} 
           post={post}
           communityId={communityId}
+          compact={compact}
         />
       ))}
     </div>
