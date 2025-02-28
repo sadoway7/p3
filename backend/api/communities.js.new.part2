@@ -1,0 +1,294 @@
+const updateJoinRequestStatus = async (requestId, status, updatedBy) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    
+    // Start a transaction
+    await conn.beginTransaction();
+    
+    // Get the current request to check if it's pending
+    const [request] = await conn.query(
+      "SELECT * FROM community_join_request WHERE id = ?",
+      [requestId]
+    );
+    
+    if (!request || request.status !== 'pending') {
+      // Only pending requests can be updated
+      await conn.rollback();
+      return null;
+    }
+    
+    // Update the request status
+    await conn.query(
+      "UPDATE community_join_request SET status = ?, updated_at = NOW() WHERE id = ?",
+      [status, requestId]
+    );
+    
+    // If approved, add the user as a community member
+    if (status === 'approved') {
+      await conn.query(
+        "INSERT INTO community_member (community_id, user_id, role) VALUES (?, ?, 'member') " +
+        "ON DUPLICATE KEY UPDATE role = 'member'",
+        [request.community_id, request.user_id]
+      );
+      
+      // Update user statistics
+      await conn.query(
+        `UPDATE user_statistic 
+         SET communities_joined = communities_joined + 1
+         WHERE user_id = ?`,
+        [request.user_id]
+      );
+    }
+    
+    // Log activity
+    const activityId = uuidv4();
+    await conn.query(
+      `INSERT INTO activity (
+        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+      ) VALUES (
+        ?, ?, 
+        (SELECT id FROM activity_type WHERE name = 'COMMUNITY_JOIN_REQUEST'),
+        (SELECT id FROM action WHERE name = 'UPDATE'),
+        ?, 'community_join_request', ?, NOW()
+      )`,
+      [
+        activityId, 
+        updatedBy, 
+        requestId, 
+        JSON.stringify({ 
+          community_id: request.community_id,
+          user_id: request.user_id,
+          status: status
+        })
+      ]
+    );
+    
+    // Commit the transaction
+    await conn.commit();
+    
+    // Return the updated request
+    const [updatedRequest] = await conn.query(
+      "SELECT * FROM community_join_request WHERE id = ?",
+      [requestId]
+    );
+    return updatedRequest || null;
+  } catch (error) {
+    console.error("Error updating join request:", error);
+    if (conn) {
+      await conn.rollback();
+    }
+    throw new Error('Failed to update join request');
+  } finally {
+    if (conn) conn.end();
+  }
+};
+
+const deleteJoinRequest = async (requestId, userId) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    
+    // Start a transaction
+    await conn.beginTransaction();
+    
+    // Get the request to log its details
+    const [request] = await conn.query(
+      "SELECT * FROM community_join_request WHERE id = ?",
+      [requestId]
+    );
+    
+    if (!request) {
+      return false;
+    }
+    
+    // Log activity
+    const activityId = uuidv4();
+    await conn.query(
+      `INSERT INTO activity (
+        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+      ) VALUES (
+        ?, ?, 
+        (SELECT id FROM activity_type WHERE name = 'COMMUNITY_JOIN_REQUEST'),
+        (SELECT id FROM action WHERE name = 'DELETE'),
+        ?, 'community_join_request', ?, NOW()
+      )`,
+      [
+        activityId, 
+        userId, 
+        requestId, 
+        JSON.stringify({ 
+          community_id: request.community_id,
+          user_id: request.user_id
+        })
+      ]
+    );
+    
+    // Delete the request
+    const result = await conn.query(
+      "DELETE FROM community_join_request WHERE id = ?",
+      [requestId]
+    );
+    
+    // Commit the transaction
+    await conn.commit();
+    
+    return result.affectedRows > 0;
+  } catch (error) {
+    console.error("Error deleting join request:", error);
+    if (conn) {
+      await conn.rollback();
+    }
+    throw new Error('Failed to delete join request');
+  } finally {
+    if (conn) conn.end();
+  }
+};
+
+const getUserJoinRequests = async (userId, status) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    
+    let query = "SELECT * FROM community_join_request WHERE user_id = ?";
+    const params = [userId];
+    
+    if (status) {
+      query += " AND status = ?";
+      params.push(status);
+    }
+    
+    const requests = await conn.query(query, params);
+    return requests;
+  } catch (error) {
+    console.error("Error fetching user join requests:", error);
+    throw new Error('Failed to fetch user join requests');
+  } finally {
+    if (conn) conn.end();
+  }
+};
+
+// Enhanced community information
+const getCommunityAbout = async (communityId) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    
+    // Get the community
+    const [community] = await conn.query(
+      "SELECT * FROM community WHERE id = ?",
+      [communityId]
+    );
+    
+    if (!community) {
+      return null;
+    }
+    
+    // Get the member count
+    const [memberCountResult] = await conn.query(
+      "SELECT COUNT(*) as memberCount FROM community_member WHERE community_id = ?",
+      [communityId]
+    );
+    const memberCount = memberCountResult.memberCount || 0;
+    
+    // Get the post count
+    const [postCountResult] = await conn.query(
+      "SELECT COUNT(*) as postCount FROM post WHERE community_id = ?",
+      [communityId]
+    );
+    const postCount = postCountResult.postCount || 0;
+    
+    // Get the moderators
+    const moderators = await conn.query(
+      "SELECT user_id FROM community_member WHERE community_id = ? AND role IN ('moderator', 'admin')",
+      [communityId]
+    );
+    const moderatorIds = moderators.map(mod => mod.user_id);
+    
+    // Return the enhanced community information
+    return {
+      ...community,
+      memberCount,
+      postCount,
+      moderators: moderatorIds
+    };
+  } catch (error) {
+    console.error("Error fetching community about:", error);
+    throw new Error('Failed to fetch community about');
+  } finally {
+    if (conn) conn.end();
+  }
+};
+
+const getUserCommunities = async (userId) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    
+    // Get the communities the user is a member of
+    const communities = await conn.query(
+      `SELECT c.* 
+       FROM community c
+       JOIN community_member cm ON c.id = cm.community_id
+       WHERE cm.user_id = ?`,
+      [userId]
+    );
+    
+    return communities;
+  } catch (error) {
+    console.error("Error fetching user communities:", error);
+    throw new Error('Failed to fetch user communities');
+  } finally {
+    if (conn) conn.end();
+  }
+};
+
+const searchCommunities = async (searchTerm) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    
+    // Search for communities by name or description
+    const communities = await conn.query(
+      `SELECT * FROM community 
+       WHERE name LIKE ? OR description LIKE ?`,
+      [`%${searchTerm}%`, `%${searchTerm}%`]
+    );
+    
+    return communities;
+  } catch (error) {
+    console.error("Error searching communities:", error);
+    throw new Error('Failed to search communities');
+  } finally {
+    if (conn) conn.end();
+  }
+};
+
+// Export all functions
+module.exports = {
+  getCommunities,
+  getCommunity,
+  createCommunity,
+  updateCommunity,
+  deleteCommunity,
+  getCommunityRules,
+  addCommunityRule,
+  updateCommunityRule,
+  deleteCommunityRule,
+  getCommunitySettings,
+  updateCommunitySettings,
+  getCommunityMembers,
+  getCommunityMember,
+  addCommunityMember,
+  updateCommunityMemberRole,
+  removeCommunityMember,
+  getJoinRequests,
+  getJoinRequest,
+  createJoinRequest,
+  updateJoinRequestStatus,
+  deleteJoinRequest,
+  getUserJoinRequests,
+  getCommunityAbout,
+  getUserCommunities,
+  searchCommunities
+};
