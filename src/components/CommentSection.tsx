@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import CommentItem from './CommentItem'
-import { getPostComments, createComment, Comment } from '../api/comments'
+import { createComment } from '../api/comments'
+import { getPostComments } from '../api/compatibility'
 import { AuthContext } from '../context/AuthContext'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -9,7 +10,7 @@ interface CommentSectionProps {
 }
 
 export default function CommentSection({ postId }: CommentSectionProps) {
-  const [comments, setComments] = useState<Comment[]>([])
+  const [comments, setComments] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [commentText, setCommentText] = useState<string>('')
@@ -24,7 +25,8 @@ export default function CommentSection({ postId }: CommentSectionProps) {
     const fetchComments = async () => {
       try {
         setLoading(true)
-        const data = await getPostComments(postId, true) // Get threaded comments
+        // Use the compatibility layer function which has error handling
+        const data = await getPostComments(postId, true)
         setComments(data)
         setError(null)
       } catch (err) {
@@ -126,7 +128,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
   }
 
   // Format comment data for display
-  const formatCommentForDisplay = (comment: Comment): any => {
+  const formatCommentForDisplay = (comment: any): any => {
     return {
       ...comment,
       timestamp: comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : '',

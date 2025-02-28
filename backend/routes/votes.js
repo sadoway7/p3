@@ -44,8 +44,22 @@ router.post('/comments/:commentId', authenticateToken, checkNotBanned, async (re
   }
 });
 
-// Get user's vote on a post
+// Get user's vote on a post - plural form
 router.get('/posts/:postId/user', authenticateToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user.id;
+    
+    const value = await getUserPostVote(userId, postId);
+    res.json({ value });
+  } catch (error) {
+    console.error('Error getting user post vote:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get user's vote on a post - singular form for compatibility
+router.get('/post/:postId/user', authenticateToken, async (req, res) => {
   try {
     const { postId } = req.params;
     const userId = req.user.id;

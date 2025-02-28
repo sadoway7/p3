@@ -1,0 +1,867 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+
+Additional Info:
+----------------
+
+================================================================
+Directory Structure
+================================================================
+ActivityHistory.tsx
+ActivityHistory.tsx.new
+CommentItem.tsx
+CommentSection.tsx
+CommunityAbout.tsx
+CommunityCard.tsx
+CommunityDiscovery.tsx
+CommunityHeader.tsx
+CommunityHeader.tsx.new
+CommunityInfo.tsx
+CommunityList.tsx
+CommunityModControls.tsx
+CommunityRules.tsx
+CommunityRules.tsx.new
+CommunitySearch.tsx
+CommunitySettings.tsx
+CommunitySidebar.tsx
+CreateCommunityModal.tsx
+CreatePostModal.tsx
+EditProfileModal.tsx
+ModeratorDashboard.tsx
+Navbar.tsx
+Post.tsx
+PostCreationForm.tsx
+PostItem.tsx
+PostList.tsx
+PostList.tsx.new
+ProfileActions.tsx
+Sidebar.tsx
+UserInfo.tsx
+UserPosts.tsx
+
+================================================================
+Files
+================================================================
+
+================
+File: ActivityHistory.tsx
+================
+interface Activity {
+interface ActivityHistoryProps {
+  const fetchActivities = async () => {
+  const loadMore = () => {
+
+================
+File: ActivityHistory.tsx.new
+================
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { 
+  formatActivity,
+  ActivityQueryOptions
+} from '../api/activities';
+import { getActivityHistory } from '../api/compatibility';
+
+interface Activity {
+  id: string;
+  user_id: string;
+  activity_type_id: string;
+  action_id: string;
+  entity_id?: string;
+  entity_type?: string;
+  metadata?: any;
+  created_at: string;
+  activity_type_name: string;
+  action_name: string;
+  username?: string;
+  entity_details?: any;
+}
+
+interface ActivityHistoryProps {
+  userId?: string;
+  communityId?: string;
+  postId?: string;
+  limit?: number;
+  showFilters?: boolean;
+}
+
+const ActivityHistory: React.FC<ActivityHistoryProps> = ({ 
+  userId, 
+  communityId, 
+  postId, 
+  limit = 20,
+  showFilters = false
+}) => {
+  const { token } = useAuth();
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  
+  // Filter states
+  const [activityType, setActivityType] = useState<string>('');
+  const [actionType, setActionType] = useState<string>('');
+  const [entityType, setEntityType] = useState<string>('');
+  
+  useEffect(() => {
+    fetchActivities();
+  }, [userId, communityId, postId, offset, activityType, actionType, entityType]);
+  
+  const fetchActivities = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let result: Activity[] = [];
+      
+      // Use the compatibility layer to get activities
+      if (communityId) {
+        result = await getActivityHistory('community', communityId, token) as Activity[];
+      } else if (userId) {
+        result = await getActivityHistory('user', userId, token) as Activity[];
+      } else if (postId) {
+        result = await getActivityHistory('post', postId, token) as Activity[];
+      }
+      
+      setActivities(result);
+      setHasMore(result.length === limit);
+    } catch (error: any) {
+      console.error('Error fetching activities:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const loadMore = () => {
+    setOffset(prev => prev + limit);
+  };
+  
+  if (loading && activities.length === 0) {
+    return <div className="text-center py-4">Loading activities...</div>;
+  }
+  
+  if (error && activities.length === 0) {
+    return (
+      <div className="text-center text-red-500 py-4">
+        Error loading activities: {error}
+      </div>
+    );
+  }
+  
+  if (activities.length === 0) {
+    return <div className="text-center py-4">No activities found.</div>;
+  }
+  
+  return (
+    <div className="activity-history mt-4">
+      {showFilters && (
+        <div className="filters mb-4 flex gap-2 flex-wrap">
+          <select 
+            value={activityType} 
+            onChange={e => setActivityType(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Activity Types</option>
+            <option value="POST">Posts</option>
+            <option value="COMMENT">Comments</option>
+            <option value="VOTE">Votes</option>
+            <option value="COMMUNITY">Communities</option>
+          </select>
+          
+          <select 
+            value={actionType} 
+            onChange={e => setActionType(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Actions</option>
+            <option value="CREATE">Create</option>
+            <option value="UPDATE">Update</option>
+            <option value="DELETE">Delete</option>
+            <option value="UPVOTE">Upvote</option>
+            <option value="DOWNVOTE">Downvote</option>
+            <option value="JOIN">Join</option>
+            <option value="LEAVE">Leave</option>
+          </select>
+          
+          <select 
+            value={entityType} 
+            onChange={e => setEntityType(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Entities</option>
+            <option value="post">Posts</option>
+            <option value="comment">Comments</option>
+            <option value="community">Communities</option>
+            <option value="user">Users</option>
+          </select>
+        </div>
+      )}
+      
+      <ul className="divide-y">
+        {activities.map(activity => (
+          <li key={activity.id} className="py-2">
+            <div className="flex justify-between">
+              <div>
+                <strong>{activity.username || 'User'}</strong> {' '}
+                {formatActivity(activity)}
+              </div>
+              <div className="text-gray-500 text-sm">
+                {new Date(activity.created_at).toLocaleString()}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+      
+      {hasMore && (
+        <button 
+          onClick={loadMore} 
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          disabled={loading}
+        >
+          {loading ? 'Loading...' : 'Load More'}
+        </button>
+      )}
+    </div>
+  );
+};
+
+export default ActivityHistory;
+
+================
+File: CommentItem.tsx
+================
+interface CommentItemProps {
+export default function CommentItem({ comment, onReply, level = 0 }: CommentItemProps) {
+    const fetchUserVote = async () => {
+  const handleVote = async (voteValue: number) => {
+  const handleSubmitReply = async (e: React.FormEvent) => {
+  const handleEditComment = async (e: React.FormEvent) => {
+  const handleDeleteComment = async () => {
+  const getIndentClass = () => {
+                    disabled={!replyText.trim()}
+
+================
+File: CommentSection.tsx
+================
+interface CommentSectionProps {
+export default function CommentSection({ postId }: CommentSectionProps) {
+    const fetchComments = async () => {
+  const handleSubmitComment = async (e: React.FormEvent) => {
+  const handleReply = async (parentId: string, content: string) => {
+        const findAndAddReply = (comments: any[]) => {
+  const formatCommentForDisplay = (comment: any): any => {
+      timestamp: comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : '',
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            onChange={(e) => setCommentText(e.target.value)}
+
+================
+File: CommunityAbout.tsx
+================
+interface CommunityInfo {
+interface CommunityMember {
+interface Props {
+export default function CommunityAbout({ communityId }: Props) {
+    async function fetchData() {
+        <p>Created: {new Date(community.created_at).toLocaleDateString()}</p>
+
+================
+File: CommunityCard.tsx
+================
+interface CommunityCardProps {
+export default function CommunityCard({ community }: CommunityCardProps) {
+  const handleJoin = async (e: React.MouseEvent) => {
+
+================
+File: CommunityDiscovery.tsx
+================
+    const fetchCommunities = async () => {
+
+================
+File: CommunityHeader.tsx
+================
+interface CommunityAbout {
+interface Props {
+export default function CommunityHeader({ communityId }: Props) {
+  const getDemoStats = (community: any) => {
+    async function fetchCommunity() {
+  const joinCommunity = async () => {
+  const leaveCommunity = async () => {
+              Created {new Date(community.created_at).toLocaleDateString()}
+
+================
+File: CommunityHeader.tsx.new
+================
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { getCommunityDetails } from '../api/compatibility';
+
+interface CommunityAbout {
+  id: string;
+  name: string;
+  description: string;
+  privacy: 'public' | 'private';
+  memberCount?: number;
+  postCount?: number;
+  moderators?: string[];
+  created_at: string;
+}
+
+interface Props {
+  communityId: string;
+}
+
+export default function CommunityHeader({ communityId }: Props) {
+  const [community, setCommunity] = useState<CommunityAbout | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isMember, setIsMember] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
+  const { user, token, isAuthenticated } = useAuth();
+
+  // For demo purposes - hardcoded counts until backend is updated
+  const getDemoStats = (community: any) => {
+    // Generate pseudo-random but consistent numbers based on community ID
+    const hash = community.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+    const memberCount = 10 + (hash % 990); // Between 10-1000 members
+    const postCount = 5 + (hash % 195);   // Between 5-200 posts
+    
+    return {
+      memberCount,
+      postCount
+    };
+  };
+
+  useEffect(() => {
+    async function fetchCommunity() {
+      try {
+        setLoading(true);
+        // Use our compatibility layer to get community details
+        const communityData = await getCommunityDetails(communityId, token);
+        
+        // If we got data, construct a CommunityAbout object
+        if (communityData) {
+          // Get demo stats until backend is updated
+          const stats = getDemoStats(communityData);
+          
+          setCommunity({
+            ...communityData,
+            memberCount: stats.memberCount,
+            postCount: stats.postCount,
+          });
+          
+          // Check if the user is a member
+          if (user) {
+            // This would normally check if the user is a member
+            // For now we'll assume they are for demo purposes
+            setIsMember(true);
+          }
+        } else {
+          setError('Community not found');
+        }
+      } catch (err: any) {
+        console.error("Error fetching community:", err);
+        setError(err.message || 'Failed to fetch community');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (communityId) {
+      fetchCommunity();
+    }
+  }, [communityId, user, token]);
+
+  const joinCommunity = async () => {
+    if (!isAuthenticated) {
+      alert('You must be logged in to join a community');
+      return;
+    }
+    
+    setJoinLoading(true);
+    
+    try {
+      // For now, just simulate the join action
+      setTimeout(() => {
+        setIsMember(true);
+        setJoinLoading(false);
+      }, 500);
+    } catch (err: any) {
+      console.error("Error joining community:", err);
+      alert('Failed to join community: ' + err.message);
+      setJoinLoading(false);
+    }
+  };
+
+  const leaveCommunity = async () => {
+    setJoinLoading(true);
+    
+    try {
+      // For now, just simulate the leave action
+      setTimeout(() => {
+        setIsMember(false);
+        setJoinLoading(false);
+      }, 500);
+    } catch (err: any) {
+      console.error("Error leaving community:", err);
+      alert('Failed to leave community: ' + err.message);
+      setJoinLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="animate-pulse bg-gray-200 p-8 rounded-md text-center">
+        <div className="h-6 bg-gray-300 w-1/3 mx-auto mb-4 rounded"></div>
+        <div className="h-4 bg-gray-300 w-2/3 mx-auto rounded"></div>
+      </div>
+    );
+  }
+
+  if (error || !community) {
+    return (
+      <div className="text-center p-8 bg-red-50 text-red-500 rounded-md">
+        <h2 className="text-xl font-bold">Error</h2>
+        <p>{error || 'Community not found'}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-md shadow mb-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold">{community.name}</h1>
+          <p className="text-gray-600 mt-2">{community.description}</p>
+          
+          <div className="flex mt-4 text-sm text-gray-500 space-x-4">
+            <div>
+              <span className="font-medium">{community.memberCount}</span> members
+            </div>
+            <div>
+              <span className="font-medium">{community.postCount}</span> posts
+            </div>
+            <div>
+              Created {new Date(community.created_at).toLocaleDateString()}
+            </div>
+          </div>
+        </div>
+        
+        {isAuthenticated && (
+          <button
+            onClick={isMember ? leaveCommunity : joinCommunity}
+            disabled={joinLoading}
+            className={`px-4 py-2 rounded-md ${
+              isMember 
+                ? 'border border-gray-300 text-gray-700 hover:bg-gray-100' 
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
+            {joinLoading ? 'Loading...' : isMember ? 'Leave' : 'Join'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+================
+File: CommunityInfo.tsx
+================
+interface CommunityAbout {
+interface Props {
+export default function CommunityInfo({ communityId }: Props) {
+    async function fetchCommunity() {
+
+================
+File: CommunityList.tsx
+================
+interface Community {
+interface CommunityListProps {
+export default function CommunityList({ communities }: CommunityListProps) {
+  const getColorClass = (index: number) => {
+  const handleJoin = async (e: React.MouseEvent, communityId: string) => {
+
+================
+File: CommunityModControls.tsx
+================
+interface CommunityModControlsProps {
+  const loadPendingCounts = async () => {
+
+================
+File: CommunityRules.tsx
+================
+interface CommunityRule {
+interface Props {
+export default function CommunityRules({ communityId }: Props) {
+    async function fetchRules() {
+
+================
+File: CommunityRules.tsx.new
+================
+import React, { useState, useEffect } from 'react';
+import { getCommunityRules } from '../api/compatibility';
+
+interface CommunityRule {
+  id: string;
+  title: string;
+  description: string;
+}
+
+interface Props {
+  communityId: string;
+}
+
+export default function CommunityRules({ communityId }: Props) {
+  const [rules, setRules] = useState<CommunityRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchRules() {
+      try {
+        setLoading(true);
+        const fetchedRules = await getCommunityRules(communityId);
+        setRules(fetchedRules || []);
+      } catch (error: unknown) {
+        console.error("Error fetching community rules:", error);
+        // Do not show an error for missing rules - simply show no rules are set
+        setRules([]);
+        
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError('Unknown error');
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (communityId) {
+      fetchRules();
+    }
+  }, [communityId]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-md shadow p-4 animate-pulse">
+        <h3 className="text-lg font-medium h-5 bg-gray-200 rounded w-1/3 mb-4"></h3>
+        <div className="space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/6"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Display nothing or a minimal message if no rules
+  if (rules.length === 0) {
+    return (
+      <div className="bg-white rounded-md shadow p-4">
+        <h3 className="text-lg font-medium">Community Rules</h3>
+        <p className="text-gray-500 mt-2">No rules have been set for this community yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-md shadow p-4">
+      <h3 className="text-lg font-medium">Community Rules</h3>
+      <ol className="mt-3 space-y-3 list-decimal list-inside">
+        {rules.map((rule) => (
+          <li key={rule.id} className="text-gray-700">
+            <span className="font-medium">{rule.title}</span>
+            {rule.description && (
+              <p className="text-gray-600 ml-6 mt-1 text-sm">{rule.description}</p>
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+================
+File: CommunitySearch.tsx
+================
+interface Props {
+export default function CommunitySearch({ onSearch, onSearchStart, onSearchError }: Props) {
+  const handleSearch = async (e: React.FormEvent) => {
+          onChange={(e) => setSearchTerm(e.target.value)}
+
+================
+File: CommunitySettings.tsx
+================
+interface CommunitySettings {
+interface Community {
+interface Props {
+export default function CommunitySettings({ communityId }: Props) {
+    async function fetchData() {
+  const handleTogglePrivacy = async () => {
+  const handleTogglePostImages = async () => {
+  const handleTogglePostLinks = async () => {
+  const handleJoinMethodChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+            <option value="auto_approve">Auto Approve (anyone can join)</option>
+            <option value="requires_approval">Requires Approval (moderator must approve joins)</option>
+
+================
+File: CommunitySidebar.tsx
+================
+interface CommunitySidebarProps {
+  const checkMembershipStatus = async () => {
+  const handleJoinCommunity = async () => {
+        throw new Error('Failed to join community');
+  const handleLeaveCommunity = async () => {
+        throw new Error('Failed to leave community');
+
+================
+File: CreateCommunityModal.tsx
+================
+interface CreateCommunityModalProps {
+export default function CreateCommunityModal({ onClose, onSuccess }: CreateCommunityModalProps) {
+  const handleSubmit = async (e: React.FormEvent) => {
+
+================
+File: CreatePostModal.tsx
+================
+interface Props {
+interface Community {
+export default function CreatePostModal({ onClose, communityId, onSuccess }: Props) {
+    async function fetchData() {
+  const handleSubmit = async (e: React.FormEvent) => {
+
+================
+File: EditProfileModal.tsx
+================
+interface EditProfileModalProps {
+export default function EditProfileModal({ onClose, onSuccess }: EditProfileModalProps) {
+  const handleSubmit = async (e: React.FormEvent) => {
+
+================
+File: ModeratorDashboard.tsx
+================
+interface ModeratorDashboardProps {
+  const loadData = async () => {
+  const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const saveSettings = async () => {
+  const handleRoleChange = async (userId: string, newRole: 'member' | 'moderator' | 'admin') => {
+  const approvePost = async (postId: string) => {
+  const showRejectForm = (postId: string) => {
+  const rejectPost = async () => {
+  const showBanUserForm = (userId: string) => {
+  const submitBan = async () => {
+  const unbanUserAction = async (userId: string) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+                      <h4 className="text-lg font-medium">{post.title}</h4>
+
+================
+File: Navbar.tsx
+================
+  const handleLogout = () => {
+
+================
+File: Post.tsx
+================
+interface PostProps {
+export default function Post({ postId }: PostProps) {
+    const fetchPost = async () => {
+    const fetchUserVote = async () => {
+  const handleVote = async (voteValue: number) => {
+            {' '}by {username} • {formatDistanceToNow(new Date(created_at), { addSuffix: true })}
+
+================
+File: PostCreationForm.tsx
+================
+interface PostCreationFormProps {
+    const checkCommunitySettings = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+        throw new Error(data.message || 'Failed to create post');
+
+================
+File: PostItem.tsx
+================
+export default function PostItem({ post }) {
+
+================
+File: PostList.tsx
+================
+interface Post {
+interface PostListProps {
+export default function PostList({ communityId }: PostListProps) {
+    async function fetchData() {
+            timestamp: post.created_at || new Date().toISOString(),
+
+================
+File: PostList.tsx.new
+================
+import React, { useState, useEffect } from 'react';
+import PostItem from './PostItem';
+import { useAuth } from '../context/AuthContext';
+import { getCommunityPosts } from '../api/compatibility';
+
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  username: string;
+  timestamp: string;
+  comments: number;
+  votes: number;
+  privacy?: 'public' | 'private';
+}
+
+interface PostListProps {
+  communityId?: string | null;
+}
+
+export default function PostList({ communityId }: PostListProps) {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        if (communityId) {
+          // Use our compatibility layer instead of direct API call
+          const data = await getCommunityPosts(communityId, token);
+          
+          // Convert the data to our Post interface format
+          const formattedPosts = data.map((post: any) => ({
+            id: post.id,
+            title: post.title || 'Untitled Post',
+            content: post.content || '',
+            username: post.username || 'Unknown User',
+            timestamp: post.created_at || new Date().toISOString(),
+            comments: 0, // We'll implement this later
+            votes: 0,    // We'll implement this later
+          }));
+          
+          setPosts(formattedPosts);
+        } else {
+          setPosts([]);
+        }
+      } catch (error: unknown) {
+        console.error('Error fetching posts:', error);
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError('An unknown error occurred');
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [communityId, token]);
+
+  if (loading) {
+    return <div>Loading posts...</div>;
+  }
+
+  if (error) {
+    return <div>Error loading posts: {error}</div>;
+  }
+
+  if (posts.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <h3 className="text-lg font-medium text-gray-600">No posts found</h3>
+        <p className="text-gray-500 mt-2">Be the first to create a post in this community!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {posts.map(post => (
+        <PostItem 
+          key={post.id} 
+          post={post}
+          communityId={communityId}
+        />
+      ))}
+    </div>
+  );
+}
+
+================
+File: ProfileActions.tsx
+================
+interface ProfileActionsProps {
+export default function ProfileActions({ onEditProfile }: ProfileActionsProps) {
+  const handleLogout = () => {
+
+================
+File: Sidebar.tsx
+================
+    const fetchCommunities = async () => {
+
+================
+File: UserInfo.tsx
+================
+interface UserData {
+interface UserInfoProps {
+  userData?: UserData;
+export default function UserInfo({ username, userData, isCurrentUser = false, onEditProfile }: UserInfoProps) {
+
+================
+File: UserPosts.tsx
+================
+interface Post {
+interface UserPostsProps {
+export default function UserPosts({ username, posts = [] }: UserPostsProps) {
+
+
+
+================================================================
+End of Codebase
+================================================================
