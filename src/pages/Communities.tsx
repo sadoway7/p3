@@ -4,8 +4,9 @@ import CommunitySearch from '../components/CommunitySearch';
 import CommunityList from '../components/CommunityList';
 import CreateCommunityModal from '../components/CreateCommunityModal';
 import CommunityDiscoverySidebar from '../components/CommunityDiscoverySidebar';
-import { getCommunities, joinCommunity } from '../api/communities';
+import { getCommunities } from '../api/communities';
 import { useAuth } from '../context/AuthContext';
+import JoinCommunityButton from '../components/JoinCommunityButton';
 
 interface Community {
   id: string;
@@ -206,22 +207,7 @@ export default function Communities() {
     }
   };
 
-    const handleJoinCommunity = async (communityId: string) => {
-        if (!isAuthenticated) {
-            // Redirect to login or show login modal
-            alert('Please log in to join this community');
-            return;
-        }
-
-        try {
-            await joinCommunity(communityId, token);
-            // Refresh the communities list to update UI
-            fetchCommunities();
-        } catch (error) {
-            console.error('Failed to join community:', error);
-            setError('Failed to join community');
-        }
-    };
+    // Join functionality is now handled by the JoinCommunityButton component
 
   return (
     <div className="w-full font-mono bg-gray-50">
@@ -497,12 +483,12 @@ export default function Communities() {
                                 View
                               </Link>
                               
-                              <button 
-                                onClick={() => handleJoinCommunity(community.id)}
+                              <JoinCommunityButton 
+                                communityId={community.id}
+                                variant="compact"
                                 className="px-2 py-0.5 text-white text-xs uppercase tracking-wider rounded-sm bg-black hover:bg-gray-800 transition-colors"
-                              >
-                                Join
-                              </button>
+                                onJoin={() => fetchCommunities()}
+                              />
                             </div>
                           </div>
                           
@@ -655,12 +641,12 @@ export default function Communities() {
                             </div>
                             
                             <div onClick={(e) => e.stopPropagation()}>
-                              <button 
-                                onClick={() => handleJoinCommunity(community.id)}
-                                className="px-3 py-1 text-white text-xs uppercase tracking-wider rounded-sm bg-black hover:bg-gray-800 transition-colors"
-                              >
-                                Join
-                              </button>
+                              <JoinCommunityButton 
+                                communityId={community.id}
+                                variant="compact"
+                                className="bg-black hover:bg-gray-800 text-white text-xs uppercase tracking-wider rounded-sm"
+                                onJoin={() => fetchCommunities()}
+                              />
                             </div>
                           </div>
                           

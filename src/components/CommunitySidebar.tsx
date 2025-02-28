@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CommunityModControls from './CommunityModControls';
-import { joinCommunity, leaveCommunity, getCommunityMember } from '../api/communities';
+import { getCommunityMember } from '../api/communities';
+import JoinCommunityButton from './JoinCommunityButton';
 
 interface CommunitySidebarProps {
   communityId: string;
@@ -58,55 +59,7 @@ const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
     }
   };
   
-  const handleJoinCommunity = async () => {
-    if (!user || !token) {
-      alert('You must be logged in to join communities');
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // Use the imported joinCommunity function from communities API
-      console.log(`Attempting to join community ${communityId}`);
-      
-      await joinCommunity(communityId, token);
-      
-      // Check the membership status to update state correctly
-      await checkMembershipStatus();
-      
-      if (onJoin) onJoin();
-    } catch (error) {
-      console.error('Error joining community:', error);
-      alert('Failed to join community. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleLeaveCommunity = async () => {
-    if (!user || !token) return;
-    
-    if (!confirm('Are you sure you want to leave this community?')) {
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // Use the imported leaveCommunity function
-      await leaveCommunity(communityId, undefined, token);
-      
-      setIsMember(false);
-      setIsModerator(false);
-      if (onLeave) onLeave();
-    } catch (error) {
-      console.error('Error leaving community:', error);
-      alert('Failed to leave community. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // These functions are now handled by the JoinCommunityButton component
   
   return (
     <div className="space-y-4">
@@ -118,30 +71,12 @@ const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
           <div className="text-gray-700">{memberCount}</div>
         </div>
         <div className="flex">
-          {!user ? (
-            <button 
-              onClick={() => alert('You must be logged in to join communities')}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-            >
-              Join
-            </button>
-          ) : !isMember ? (
-            <button 
-              onClick={handleJoinCommunity}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Joining...' : 'Join'}
-            </button>
-          ) : (
-            <button 
-              onClick={handleLeaveCommunity}
-              className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Leaving...' : 'Leave'}
-            </button>
-          )}
+          <JoinCommunityButton 
+            communityId={communityId}
+            variant="sidebar"
+            onJoin={onJoin}
+            onLeave={onLeave}
+          />
         </div>
       </div>
       

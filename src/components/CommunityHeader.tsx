@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getCommunityDetails } from '../api/compatibility';
+import JoinCommunityButton from './JoinCommunityButton';
 
 interface CommunityAbout {
   id: string;
@@ -78,42 +79,7 @@ export default function CommunityHeader({ communityId }: Props) {
     }
   }, [communityId, user, token]);
 
-  const joinCommunity = async () => {
-    if (!isAuthenticated) {
-      alert('You must be logged in to join a community');
-      return;
-    }
-    
-    setJoinLoading(true);
-    
-    try {
-      // For now, just simulate the join action
-      setTimeout(() => {
-        setIsMember(true);
-        setJoinLoading(false);
-      }, 500);
-    } catch (err: any) {
-      console.error("Error joining community:", err);
-      alert('Failed to join community: ' + err.message);
-      setJoinLoading(false);
-    }
-  };
-
-  const leaveCommunity = async () => {
-    setJoinLoading(true);
-    
-    try {
-      // For now, just simulate the leave action
-      setTimeout(() => {
-        setIsMember(false);
-        setJoinLoading(false);
-      }, 500);
-    } catch (err: any) {
-      console.error("Error leaving community:", err);
-      alert('Failed to leave community: ' + err.message);
-      setJoinLoading(false);
-    }
-  };
+  // Join and leave functionality is now handled by the JoinCommunityButton component
 
   if (loading) {
     return (
@@ -153,19 +119,12 @@ export default function CommunityHeader({ communityId }: Props) {
           </div>
         </div>
         
-        {isAuthenticated && (
-          <button
-            onClick={isMember ? leaveCommunity : joinCommunity}
-            disabled={joinLoading}
-            className={`px-4 py-2 rounded-md ${
-              isMember 
-                ? 'border border-gray-300 text-gray-700 hover:bg-gray-100' 
-                : 'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
-          >
-            {joinLoading ? 'Loading...' : isMember ? 'Leave' : 'Join'}
-          </button>
-        )}
+        <JoinCommunityButton 
+          communityId={community.id}
+          className={`px-4 py-2 rounded-md`}
+          onJoin={() => setIsMember(true)}
+          onLeave={() => setIsMember(false)}
+        />
       </div>
     </div>
   );

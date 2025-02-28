@@ -12570,7 +12570,7 @@ interface PostCreationFormProps {
 File: src/components/PostItem.tsx
 ================
 interface PostItemProps {
-export default function PostItem({ post, communityId }: PostItemProps) {
+export default function PostItem({ post, communityId, compact = false }: PostItemProps) {
     ? formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })
   const handleVote = async (voteValue: number) => {
 
@@ -12579,7 +12579,7 @@ File: src/components/PostList.tsx
 ================
 interface Post {
 interface PostListProps {
-export default function PostList({ communityId, postType = 'all' }: PostListProps) {
+export default function PostList({ communityId, postType = 'all', maxPosts, compact = false }: PostListProps) {
     async function fetchData() {
               return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           timestamp: post.created_at || new Date().toISOString(),
@@ -12737,14 +12737,13 @@ interface JoinRequest {
 File: src/pages/Home.tsx
 ================
     const fetchTrendingCommunities = async () => {
+                See more new communities →
 
 ================
 File: src/pages/Login.tsx
 ================
-export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
-              onChange={(e) => setUsername(e.target.value)}
-              onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setUsername(e.target.value)}
 
 ================
 File: src/pages/PostDetail.tsx
@@ -12764,13 +12763,12 @@ export default function Profile({ isUser }: ProfileProps) {
 ================
 File: src/pages/Register.tsx
 ================
+export default function Register() {
   const checkPasswordStrength = (password: string) => {
   const handleSubmit = async (e: React.FormEvent) => {
-          Create a new account to join the community
-              onChange={(e) => setUsername(e.target.value)}
-              onChange={(e) => setEmail(e.target.value)}
-                setPassword(e.target.value);
-                checkPasswordStrength(e.target.value);
+            Create a new account to join the community
+                onChange={(e) => setUsername(e.target.value)}
+                value={confirmPassword}
 
 ================
 File: src/routes/index.tsx
