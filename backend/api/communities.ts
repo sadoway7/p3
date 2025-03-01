@@ -698,7 +698,7 @@ export async function getCommunityMembers(communityId: string): Promise<Communit
     try {
         conn = await pool.getConnection();
         const members = await conn.query(
-            `SELECT cm.*, u.username 
+            `SELECT cm.*, u.username
              FROM community_member cm
              JOIN user u ON cm.user_id = u.id
              WHERE cm.community_id = ?`,
@@ -717,16 +717,16 @@ export async function addCommunityMember(communityId: string, userId: string, ro
     let conn;
     try {
         conn = await pool.getConnection();
-        
+
         // Start a transaction
         await conn.beginTransaction();
-        
+
         // Check if user is already a member
         const [existingMember] = await conn.query(
             "SELECT * FROM community_member WHERE community_id = ? AND user_id = ?",
             [communityId, userId]
         );
-        
+
         if (existingMember) {
             // Just update their role if needed
             if (existingMember.role !== role) {
@@ -735,22 +735,15 @@ export async function addCommunityMember(communityId: string, userId: string, ro
                     [role, communityId, userId]
                 );
             }
-            
-            // If they had a pending join request, mark it as approved
-            await conn.query(
-                "UPDATE community_join_request SET status = 'approved', updated_at = NOW() WHERE community_id = ? AND user_id = ? AND status = 'pending'",
-                [communityId, userId]
-            );
-            
             // Get user details
             const [user] = await conn.query(
                 "SELECT username FROM user WHERE id = ?",
                 [userId]
             );
-            
+
             // Commit the transaction
             await conn.commit();
-            
+
             return {
                 community_id: communityId,
                 user_id: userId,
@@ -759,53 +752,53 @@ export async function addCommunityMember(communityId: string, userId: string, ro
                 joined_at: existingMember.joined_at
             };
         }
-        
+
         // Insert new member
         await conn.query(
             "INSERT INTO community_member (community_id, user_id, role, joined_at) VALUES (?, ?, ?, NOW())",
             [communityId, userId, role]
         );
-        
+
         // If they had a pending join request, mark it as approved
         await conn.query(
             "UPDATE community_join_request SET status = 'approved', updated_at = NOW() WHERE community_id = ? AND user_id = ? AND status = 'pending'",
             [communityId, userId]
         );
-        
+
         // Get user details
         const [user] = await conn.query(
             "SELECT username FROM user WHERE id = ?",
             [userId]
         );
-        
+
         // Log activity
         const activityId = uuidv4();
         await conn.query(
             `INSERT INTO activity (
                 id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
             ) VALUES (
-                ?, ?, 
+                ?, ?,
                 (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
                 (SELECT id FROM action WHERE name = 'JOIN'),
                 ?, 'community', ?, NOW()
             )`,
             [
-                activityId, 
-                userId, 
-                communityId, 
+                activityId,
+                userId,
+                communityId,
                 JSON.stringify({ role })
             ]
         );
-        
+
         // Update user statistics
         await conn.query(
             "UPDATE user_statistic SET communities_joined = communities_joined + 1 WHERE user_id = ?",
             [userId]
         );
-        
+
         // Commit the transaction
         await conn.commit();
-        
+
         return {
             community_id: communityId,
             user_id: userId,
@@ -813,17 +806,16 @@ export async function addCommunityMember(communityId: string, userId: string, ro
             role,
             joined_at: new Date()
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error adding community member:", error);
         if (conn) {
             await conn.rollback();
         }
         throw new Error('Failed to add community member');
     } finally {
-        if (conn) conn.end();
+        if (conn) conn.release();
     }
 }
-
 export async function updateCommunityMemberRole(communityId: string, userId: string, role: 'member' | 'moderator' | 'admin', updatedBy: string): Promise<CommunityMember | null> {
     let conn;
     try {

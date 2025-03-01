@@ -77,6 +77,14 @@ const canViewCommunity = async (req, res, next) => {
     }
 };
 
+// Authentication middleware - ADDED THIS TO ENSURE USER IS AUTHENTICATED
+const ensureAuthenticated = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    next();
+};
+
 // Communities API
 router.get('/', async (req, res) => {
     try {
@@ -276,6 +284,51 @@ router.get('/:id/members', canViewCommunity, async (req, res) => {
     }
 });
 
+// Custom route for handling member removal (workaround for DELETE issues)
+router.post('/:id/members/remove', async (req, res) => {
+    const { id } = req.params;
+    const { action } = req.body;
+    
+    // Ensure user is authenticated
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const currentUserId = req.user.id;
+    
+    console.log(`POST request for member removal: community ${id}, user ${currentUserId}, action ${action}`);
+    
+    if (action !== 'leave') {
+        return res.status(400).json({ error: 'Invalid action specified' });
+    }
+    
+    try {
+        // First check if the user is actually a member
+        const member = await communityApi.getCommunityMember(id, currentUserId);
+        
+        if (!member) {
+            console.log(`User ${currentUserId} is not a member of community ${id}`);
+            return res.status(200).json({ message: 'User is not a member of this community' });
+        }
+        
+        console.log(`Removing member ${currentUserId} from community ${id} via custom endpoint`);
+        
+        // Now try to remove the member
+        const success = await communityApi.removeCommunityMember(id, currentUserId);
+        
+        if (!success) {
+            console.log(`Failed to remove member ${currentUserId} from community ${id}`);
+            return res.status(500).json({ error: 'Failed to remove member' });
+        }
+        
+        console.log(`Successfully removed member ${currentUserId} from community ${id}`);
+        res.status(200).json({ message: 'Member successfully removed' });
+    } catch (error) {
+        console.error("Error removing community member:", error);
+        res.status(500).json({ error: 'Failed to remove community member' });
+    }
+});
+
 // Get a specific member
 router.get('/:id/members/:userId', async (req, res) => {
     const { id, userId } = req.params;
@@ -293,6 +346,30 @@ router.get('/:id/members/:userId', async (req, res) => {
     } catch (error) {
         console.error("Error fetching community member:", error);
         res.status(500).json({ error: 'Failed to fetch community member' });
+    }
+});
+
+// Get membership status for the current user
+router.get('/:id/members/status', ensureAuthenticated, async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    console.log(`GET membership status: community ${id}, user ${userId}`);
+    
+    try {
+        const member = await communityApi.getCommunityMember(id, userId);
+        
+        if (!member) {
+            return res.status(404).json({ is_member: false });
+        }
+        
+        res.json({
+            is_member: true,
+            ...member
+        });
+    } catch (error) {
+        console.error("Error checking membership status:", error);
+        res.status(500).json({ error: 'Failed to check membership status' });
     }
 });
 
@@ -359,7 +436,8 @@ router.put('/:id/members/:userId', isCommunityModerator, async (req, res) => {
     }
 });
 
-router.delete('/:id/members', async (req, res) => {
+// FIXED: Added ensureAuthenticated middleware to ensure req.user is available
+router.delete('/:id/members', ensureAuthenticated, async (req, res) => {
     const { id } = req.params;
     const currentUserId = req.user.id;
     
@@ -368,10 +446,18 @@ router.delete('/:id/members', async (req, res) => {
     try {
         console.log(`Removing member ${currentUserId} from community ${id}`);
         
+        // First check if the user is actually a member
+        const member = await communityApi.getCommunityMember(id, currentUserId);
+        
+        if (!member) {
+            return res.status(404).json({ error: 'Member not found' });
+        }
+        
+        // Now try to remove the member
         const success = await communityApi.removeCommunityMember(id, currentUserId);
         
         if (!success) {
-            return res.status(404).json({ error: 'Member not found' });
+            return res.status(404).json({ error: 'Failed to remove member' });
         }
         
         console.log(`Successfully removed member ${currentUserId} from community ${id}`);

@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getCommunityMember } = require('../api/communities.ts');
-const { addCommunityMember } = require('../api/communities.js');
+const { addCommunityMember } = require('../api/communities.ts');
 const auth = require('../middleware/auth');
 
 // Route to check if the current user is a member of a community

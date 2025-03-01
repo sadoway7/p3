@@ -11,6 +11,7 @@ const commentsRoutes = require('./routes/comments');
 const usersRoutes = require('./routes/users');
 const votesRoutes = require('./routes/votes');
 const activityRoutes = require('./routes/activity');
+const communityMembersRoutes = require('./routes/community-members');
 
 // Import activity logging middleware
 const { 
@@ -91,6 +92,9 @@ app.use('/api/auth', authRoutes.router);
 
 // For communities routes, use optional authentication
 app.use('/api/communities', authenticateOptional, communitiesRoutes.router);
+
+// Register community members routes
+app.use('/api', authenticateToken, communityMembersRoutes);
 
 // For posts routes, use optional authentication
 app.use('/api/posts', authenticateOptional, postsRoutes.router);

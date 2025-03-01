@@ -19,7 +19,7 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
   onLeave,
   showLeaveButton = true,
 }) => {
-  const { user, token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
   const [isMember, setIsMember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialCheckComplete, setInitialCheckComplete] = useState(false);
@@ -27,24 +27,24 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
 
   // Check membership status on load
   useEffect(() => {
-    if (isAuthenticated && token) {
+    if (isAuthenticated && token && user) {
       checkMembershipStatus();
     } else {
       setIsMember(false);
       setInitialCheckComplete(true);
     }
-  }, [communityId, isAuthenticated, token]);
+  }, [communityId, isAuthenticated, token, user]);
   
   // If the component doesn't unmount but props change, we should recheck
   useEffect(() => {
-    if (isAuthenticated && token && initialCheckComplete) {
+    if (isAuthenticated && token && user && initialCheckComplete) {
       checkMembershipStatus();
     }
-  }, [communityId]);
+  }, [communityId, isAuthenticated, token, user]);
 
   // Check if user is a member of this community
   const checkMembershipStatus = async () => {
-    if (!isAuthenticated || !token) {
+    if (!isAuthenticated || !token || !user) {
       setIsMember(false);
       setInitialCheckComplete(true);
       return;
@@ -52,12 +52,17 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
 
     setError(null);
     try {
-      const member = await getCommunityMember(communityId, token);
+      // Try to get membership status from our communities-fix API with user ID
+      console.log(`Checking membership for user ${user.id} in community ${communityId}`);
+      const member = await getCommunityMember(communityId, token, user.id);
+      console.log('Membership check returned:', member);
+      
+      // If we got a member object back, they are a member
       setIsMember(!!member);
     } catch (error) {
       console.error('Error checking membership:', error);
+      // Don't show an error to the user, just assume they're not a member
       setIsMember(false);
-      setError('Could not verify membership status');
     }
     setInitialCheckComplete(true);
   };
@@ -87,11 +92,13 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
       
       // Trigger any parent component callback
       if (onJoin) onJoin();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to join community:', error);
       
       // Get the error message
-      const errorMessage = error?.message || 'Failed to join community. Please try again.';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to join community. Please try again.';
       
       // Verify our membership status - maybe it succeeded despite the error
       await checkMembershipStatus();
@@ -107,7 +114,7 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
     }
   };
 
-  // Leave community handler
+  // Leave community handler - simplified to match the join handler structure
   const handleLeave = async () => {
     if (!isAuthenticated || !token) return;
     
@@ -118,30 +125,36 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
     setLoading(true);
     setError(null);
     
-    // Optimistic update
+    // Set member immediately for better UX (optimistic update)
     setIsMember(false);
     
     try {
-      const success = await leaveCommunity(communityId, undefined, token);
+      // Make the API call to leave
+      await leaveCommunity(communityId, undefined, token);
       
-      if (!success) {
-        // If the API returns false, it means the member couldn't be found
-        console.log('Not a member of this community');
-      }
+      // If we got here, it was successful!
+      console.log('Successfully left community');
       
       // Verify membership status to be sure
       await checkMembershipStatus();
       
+      // Trigger any parent component callback
       if (onLeave) onLeave();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to leave community:', error);
       
       // Get the error message
-      const errorMessage = error?.message || 'Failed to leave community. Please try again.';
-      setError(errorMessage);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to leave community. Please try again.';
       
-      // Verify our membership status - maybe we're still a member
+      // Verify our membership status - maybe it succeeded despite the error
       await checkMembershipStatus();
+      
+      // If we're still a member after the check, the leave actually failed
+      if (isMember) {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -163,6 +176,7 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
     }
     
     if (isMember && showLeaveButton) {
+      // Normal leave button styles
       if (variant === 'compact') {
         return `${baseStyles} bg-red-500 hover:bg-red-600 text-white py-1 px-2 text-xs rounded`;
       } else if (variant === 'sidebar') {
@@ -184,7 +198,9 @@ const JoinCommunityButton: React.FC<JoinCommunityButtonProps> = ({
     if (!initialCheckComplete) return 'Loading...';
     if (!isAuthenticated) return 'Join';
     if (loading) return isMember ? 'Leaving...' : 'Joining...';
-    if (isMember && showLeaveButton) return 'Leave';
+    if (isMember && showLeaveButton) {
+      return 'Leave';
+    }
     return 'Join';
   };
 

@@ -7,6 +7,7 @@ import CommunityDiscoverySidebar from '../components/CommunityDiscoverySidebar';
 import { getCommunities } from '../api/communities';
 import { useAuth } from '../context/AuthContext';
 import JoinCommunityButton from '../components/JoinCommunityButton';
+import { getPosts } from '../api/posts';
 
 interface Community {
   id: string;
@@ -15,6 +16,16 @@ interface Community {
   created_at: string;
   updated_at: string;
   privacy?: 'public' | 'private';
+}
+
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  community_id: string;
+  username?: string;
 }
 
 export default function Communities() {
@@ -30,12 +41,43 @@ export default function Communities() {
   const [sortBy, setSortBy] = useState<'trending' | 'new' | 'popular' | 'active'>('trending');
   const [filterBy, setFilterBy] = useState<'all' | 'public' | 'private'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'compact'>('list');
+  const [communityPosts, setCommunityPosts] = useState<Record<string, Post[]>>({});
+  const [loadingPosts, setLoadingPosts] = useState<Record<string, boolean>>({});
+  const [postErrors, setPostErrors] = useState<Record<string, string | null>>({});
   const navigate = useNavigate();
   const { isAuthenticated, token } = useAuth();
   
   // Function to toggle community expansion
-  const toggleCommunityExpansion = (communityId: string) => {
-    setExpandedCommunityId(expandedCommunityId === communityId ? null : communityId);
+  const toggleCommunityExpansion = async (communityId: string) => {
+    const isExpanding = expandedCommunityId !== communityId;
+    setExpandedCommunityId(isExpanding ? communityId : null);
+    
+    // If expanding and we don't have posts for this community yet, fetch them
+    if (isExpanding && !communityPosts[communityId]) {
+      await fetchCommunityPosts(communityId);
+    }
+  };
+  
+  // Function to fetch posts for a specific community
+  const fetchCommunityPosts = async (communityId: string) => {
+    // Skip if we're already loading posts for this community
+    if (loadingPosts[communityId]) return;
+    
+    setLoadingPosts(prev => ({ ...prev, [communityId]: true }));
+    setPostErrors(prev => ({ ...prev, [communityId]: null }));
+    
+    try {
+      const posts = await getPosts(communityId, token);
+      setCommunityPosts(prev => ({ ...prev, [communityId]: posts }));
+    } catch (error) {
+      console.error(`Error fetching posts for community ${communityId}:`, error);
+      setPostErrors(prev => ({
+        ...prev,
+        [communityId]: error instanceof Error ? error.message : 'Failed to load posts'
+      }));
+    } finally {
+      setLoadingPosts(prev => ({ ...prev, [communityId]: false }));
+    }
   };
   
   // Function to update a community's search term
@@ -718,7 +760,7 @@ export default function Communities() {
                                 )}
                               </div>
                               
-                              {/* Placeholder for community posts */}
+                              {/* Real community posts */}
                               <div className="bg-gray-50 rounded p-2">
                                 <div className="flex justify-between items-center mb-2">
                                   <h4 className="text-sm font-medium">Recent Posts</h4>
@@ -727,22 +769,70 @@ export default function Communities() {
                                   </Link>
                                 </div>
                                 
-                                {/* Sample posts */}
-                                {[...Array(3)].map((_, postIndex) => (
-                                  <div key={postIndex} className="py-2 border-b border-gray-100 last:border-0">
-                                    <div className="flex items-start">
-                                      <div 
-                                        className="w-2 h-2 rounded-full mt-1.5 mr-2 flex-shrink-0"
-                                        style={{ backgroundColor: communityColor }}
-                                      ></div>
-                                      <div>
-                                        <h5 className="text-sm font-medium">Sample post title {postIndex + 1}</h5>
-                                        <p className="text-xs text-gray-500 mt-0.5">Posted by User{postIndex + 100} · {postIndex + 1} hours ago</p>
-                                        <p className="text-xs mt-1">This is a sample post description. Click to view the full post.</p>
-                                      </div>
+                                {/* Loading state */}
+                                {loadingPosts[community.id] && (
+                                  <div className="text-center py-4">
+                                    <div className="flex items-center justify-center space-x-2">
+                                      <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                      <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                      <span className="ml-2 text-xs text-gray-500">Loading posts...</span>
                                     </div>
                                   </div>
-                                ))}
+                                )}
+                                
+                                {/* Error state */}
+                                {postErrors[community.id] && (
+                                  <div className="text-center py-3">
+                                    <p className="text-xs text-red-500">{postErrors[community.id]}</p>
+                                    <button
+                                      onClick={() => fetchCommunityPosts(community.id)}
+                                      className="text-xs text-teal-600 mt-1 hover:underline"
+                                    >
+                                      Try again
+                                    </button>
+                                  </div>
+                                )}
+                                
+                                {/* Real posts */}
+                                {!loadingPosts[community.id] && communityPosts[community.id] && communityPosts[community.id].length > 0 && (
+                                  communityPosts[community.id].slice(0, 3).map((post) => (
+                                    <div key={post.id} className="py-2 border-b border-gray-100 last:border-0">
+                                      <div className="flex items-start">
+                                        <div
+                                          className="w-2 h-2 rounded-full mt-1.5 mr-2 flex-shrink-0"
+                                          style={{ backgroundColor: communityColor }}
+                                        ></div>
+                                        <div>
+                                          <Link to={`/post/${post.id}`}>
+                                            <h5 className="text-sm font-medium hover:text-teal-600">{post.title}</h5>
+                                          </Link>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            Posted by {post.username || 'User'} · {new Date(post.created_at).toLocaleString()}
+                                          </p>
+                                          <p className="text-xs mt-1 line-clamp-2">
+                                            {post.content.substring(0, 100)}{post.content.length > 100 ? '...' : ''}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                                
+                                {/* Empty state */}
+                                {!loadingPosts[community.id] &&
+                                  (!communityPosts[community.id] || communityPosts[community.id].length === 0) &&
+                                  !postErrors[community.id] && (
+                                  <div className="text-center py-4">
+                                    <p className="text-xs text-gray-500">No posts in this community yet.</p>
+                                    <Link
+                                      to={`/community/${community.id}`}
+                                      className="text-xs text-teal-600 mt-1 hover:underline block"
+                                    >
+                                      Be the first to post
+                                    </Link>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}

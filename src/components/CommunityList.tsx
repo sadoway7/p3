@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { joinCommunity } from '../api/communities';
+import { joinCommunity } from '../api/communities-fix';
 
 interface Community {
   id: string;
@@ -21,6 +21,37 @@ interface CommunityListProps {
 export default function CommunityList({ communities }: CommunityListProps) {
   const { user, token, isAuthenticated } = useAuth();
   const [joiningMap, setJoiningMap] = React.useState<Record<string, boolean>>({});
+  const [membershipMap, setMembershipMap] = React.useState<Record<string, boolean>>({});
+  
+  // Check membership status for all communities when component mounts
+  React.useEffect(() => {
+    if (isAuthenticated && token) {
+      const checkMemberships = async () => {
+        const newMembershipMap: Record<string, boolean> = {};
+        
+        for (const community of communities) {
+          try {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/communities/${community.id}/members/current`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              newMembershipMap[community.id] = data.is_member;
+            }
+          } catch (error) {
+            console.error(`Error checking membership for ${community.id}:`, error);
+          }
+        }
+        
+        setMembershipMap(newMembershipMap);
+      };
+      
+      checkMemberships();
+    }
+  }, [communities, isAuthenticated, token]);
   
   // Function to get a color based on index
   const getColorClass = (index: number) => {
@@ -55,8 +86,9 @@ export default function CommunityList({ communities }: CommunityListProps) {
         alert('Successfully joined community!');
       }
       
-      // Force-refresh the page to update membership state everywhere
-      window.location.reload();
+      // Instead of reloading the page, update the membership status locally
+      // This prevents all buttons from refreshing at once
+      setMembershipMap(prev => ({ ...prev, [communityId]: true }));
       
     } catch (error) {
       if (error instanceof Error) {
@@ -132,14 +164,23 @@ export default function CommunityList({ communities }: CommunityListProps) {
                   </div>
                   
                   <div className="flex-shrink-0 mt-2 md:mt-0">
-                    <button 
-                      className={`px-4 py-1 text-white text-xs uppercase tracking-wider rounded-sm relative overflow-hidden
-                        ${joiningMap[community.id] ? 'bg-gray-400 cursor-wait' : 'bg-black hover:bg-gray-800 transition-colors'}`}
-                      onClick={(e) => handleJoin(e, community.id)}
-                      disabled={joiningMap[community.id]}
-                    >
-                      {joiningMap[community.id] ? 'Joining...' : 'Join'}
-                    </button>
+                    {membershipMap[community.id] ? (
+                      <button
+                        className="px-4 py-1 text-white text-xs uppercase tracking-wider rounded-sm bg-teal-600 cursor-default"
+                        disabled={true}
+                      >
+                        Joined
+                      </button>
+                    ) : (
+                      <button
+                        className={`px-4 py-1 text-white text-xs uppercase tracking-wider rounded-sm relative overflow-hidden
+                          ${joiningMap[community.id] ? 'bg-gray-400 cursor-wait' : 'bg-black hover:bg-gray-800 transition-colors'}`}
+                        onClick={(e) => handleJoin(e, community.id)}
+                        disabled={joiningMap[community.id]}
+                      >
+                        {joiningMap[community.id] ? 'Joining...' : 'Join'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
