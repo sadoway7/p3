@@ -251,9 +251,11 @@ const CommunityListItem: React.FC<CommunityListItemProps> = ({
 
           {/* Expansion bar - bottom of standard view */}
           <button
-            className="w-full h-1 bg-gray-300 hover:bg-gray-400 cursor-pointer"
+            className="w-full h-6 bg-gray-100 hover:bg-gray-100 cursor-pointer"
             onClick={() => toggleCommunityExpansion(community.id)}
-          ></button>
+            >
+             <span className="text-xxs text-gray-400">{isExpanded ? 'Collapse' : 'Expand'}</span>
+          </button>
 
 
             {/* Expanded Community Content */}
