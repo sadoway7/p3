@@ -42,3 +42,45 @@
 .wireframe-divider {
   border-bottom: 1px solid rgba(0,0,0,0.15);
 }
+
+/* Custom Scrollbar Styles */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 212, 191, 0.5) rgba(229, 231, 235, 0.3);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(229, 231, 235, 0.3);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(45, 212, 191, 0.5);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(45, 212, 191, 0.8);
+}
+
+/* Apply custom scrollbars to common elements */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto,
+[class*="max-h-"] {
+  @apply custom-scrollbar;
+}
+
+/* Apply custom scrollbars to search result containers */
+div[class*="mt-2 bg-white border border-gray-200 rounded"] {
+  @apply custom-scrollbar;
+  max-height: 300px;
+  overflow-y: auto;
+}

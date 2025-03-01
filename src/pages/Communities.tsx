@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import CommunitySearch from '../components/CommunitySearch';
-import CommunityList from '../components/CommunityList';
 import CreateCommunityModal from '../components/CreateCommunityModal';
 import CommunityDiscoverySidebar from '../components/CommunityDiscoverySidebar';
-import { getCommunities } from '../api/communities';
+import { getCommunities, getUserCommunities } from '../api/communities';
 import { useAuth } from '../context/AuthContext';
 import JoinCommunityButton from '../components/JoinCommunityButton';
 import { getPosts } from '../api/posts';
@@ -44,8 +42,10 @@ export default function Communities() {
   const [communityPosts, setCommunityPosts] = useState<Record<string, Post[]>>({});
   const [loadingPosts, setLoadingPosts] = useState<Record<string, boolean>>({});
   const [postErrors, setPostErrors] = useState<Record<string, string | null>>({});
+  const [userCommunities, setUserCommunities] = useState<Community[]>([]);
+  const [loadingUserCommunities, setLoadingUserCommunities] = useState(false);
   const navigate = useNavigate();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   
   // Function to toggle community expansion
   const toggleCommunityExpansion = async (communityId: string) => {
@@ -214,9 +214,33 @@ export default function Communities() {
     }
   };
 
+  // Function to fetch user's joined communities
+  const fetchUserCommunities = async () => {
+    if (!isAuthenticated || !token || !user) {
+      setUserCommunities([]);
+      return;
+    }
+    
+    setLoadingUserCommunities(true);
+    try {
+      const userCommunitiesData = await getUserCommunities(user.id);
+      setUserCommunities(userCommunitiesData);
+    } catch (error) {
+      console.error('Failed to fetch user communities:', error);
+    } finally {
+      setLoadingUserCommunities(false);
+    }
+  };
+  
+  // Fetch all communities on mount
   useEffect(() => {
     fetchCommunities();
   }, []);
+  
+  // Fetch user communities when auth state changes
+  useEffect(() => {
+    fetchUserCommunities();
+  }, [isAuthenticated, token, user]);
 
   const handleCommunityCreated = (communityId: string) => {
     // Refresh the communities list
@@ -339,7 +363,7 @@ export default function Communities() {
       {/* Full width layout */}
       <div className="flex w-full">
         {/* Left Sidebar - fixed width on desktop */}
-        <div className="hidden md:block w-64 xl:w-72 flex-shrink-0 border-r border-gray-200 h-screen overflow-y-auto sticky top-10">
+        <div className="hidden md:block w-64 xl:w-72 flex-shrink-0 border-r border-gray-200 h-screen overflow-y-auto custom-scrollbar sticky top-10">
           <div className="p-4">
             {/* Search bar - compact but prominent in sidebar */}
             <form onSubmit={handleSearch} className="mb-4">
@@ -375,19 +399,38 @@ export default function Communities() {
               </div>
               
               {isAuthenticated ? (
-                <div className="max-h-32 overflow-y-auto">
-                  {/* Placeholder for user communities - would come from API */}
-                  {[1, 2, 3].map((num) => (
-                    <div key={num} className="flex items-center py-1.5 border-b border-gray-200 last:border-0">
-                      <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs mr-2"
-                        style={{ backgroundColor: num % 3 === 0 ? '#2dd4bf' : num % 3 === 1 ? '#f472b6' : '#a78bfa' }}
-                      >
-                        {String.fromCharCode(64 + num)}
+                <div className="max-h-32 overflow-y-auto custom-scrollbar">
+                  {loadingUserCommunities ? (
+                    <div className="py-2 text-center">
+                      <div className="inline-flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse"></div>
+                        <div className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        <span className="text-xs text-gray-500 ml-1">Loading...</span>
                       </div>
-                      <span className="text-sm hover:text-teal-600 cursor-pointer">Sample Community {num}</span>
                     </div>
-                  ))}
+                  ) : userCommunities.length > 0 ? (
+                    userCommunities.map((community, index) => (
+                      <Link
+                        to={`/community/${community.id}`}
+                        key={community.id}
+                        className="flex items-center py-1.5 border-b border-gray-200 last:border-0 hover:bg-gray-50"
+                      >
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs mr-2"
+                          style={{ backgroundColor: index % 3 === 0 ? '#2dd4bf' : index % 3 === 1 ? '#f472b6' : '#a78bfa' }}
+                        >
+                          {community.name.substring(0, 1).toUpperCase()}
+                        </div>
+                        <span className="text-sm hover:text-teal-600 truncate">{community.name}</span>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="py-2 text-center">
+                      <p className="text-xs text-gray-500">You haven't joined any communities yet.</p>
+                      <p className="text-xs text-teal-600 mt-1">Join communities to see them here!</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-xs text-gray-500 italic">
