@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getCommunitySettings, updateCommunitySettings, getCommunity, updateCommunity } from '../api/communities';
+import { getCommunitySettings, updateCommunitySettings, updateCommunity } from '../api/communities';
+import { getCommunity, getCommunityMember } from '../api/communities-fix';
 import { useAuth } from '../context/AuthContext';
 
 interface CommunitySettings {
@@ -48,17 +49,18 @@ export default function CommunitySettings({ communityId }: Props) {
         setSettings(settingsData);
         setCommunity(communityData);
         
-        // Check if user is a moderator
-        if (user && token) {
+        // Check if user is a moderator using our improved function
+        if (user && token && user.id) {
           try {
-            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-            const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members/${user.id}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const member = await getCommunityMember(communityId, token, user.id);
             
-            if (response.ok) {
-              const member = await response.json();
+            if (member) {
+              // If we got a result, check if they're a moderator or admin
               setIsModerator(member.role === 'moderator' || member.role === 'admin');
+              console.log(`User is ${member.role} of community ${communityId}`);
+            } else {
+              console.log(`User is not a member of community ${communityId}`);
+              setIsModerator(false);
             }
           } catch (err) {
             console.error("Error checking moderator status:", err);

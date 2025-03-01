@@ -99,37 +99,42 @@ const createPost = async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
-    
-    const { title, content, communityId } = req.body;
+
+    const { title, content, communityId, profile_post } = req.body; // Destructure profile_post
     const userId = req.user.id;
-    
+
     // Validate required fields
-    if (!title || !content || !communityId) {
-      return res.status(400).json({ message: 'Title, content, and communityId are required' });
+    if (!title || !content) {
+      return res.status(400).json({ message: 'Title and content are required' });
     }
-    
-    // Check if community exists
-    const [community] = await conn.query(
-      "SELECT * FROM community WHERE id = ?",
-      [communityId]
-    );
-    
-    if (!community) {
-      return res.status(404).json({ message: 'Community not found' });
+
+    // communityId is not required for profile posts
+    if (communityId) {
+      // Check if community exists
+      const [community] = await conn.query(
+        "SELECT * FROM community WHERE id = ?",
+        [communityId]
+      );
+
+      if (!community) {
+        return res.status(404).json({ message: 'Community not found' });
+      }
     }
-    
+
+
     // Start a transaction
     await conn.beginTransaction();
-    
+
     try {
-      // Create the post
+      // Create the post, including profile_post
       const id = uuidv4();
-      
+      console.log("Inserting post with data:", { id, title, content, userId, communityId, profile_post });
+
       await conn.query(
-        "INSERT INTO post (id, title, content, user_id, community_id) VALUES (?, ?, ?, ?, ?)",
-        [id, title, content, userId, communityId]
+        "INSERT INTO post (id, title, content, user_id, community_id, profile_post) VALUES (?, ?, ?, ?, ?, ?)",
+        [id, title, content, userId, communityId, profile_post || false] // Use profile_post from request, default to false
       );
-      
+
       // Get the created post with user information
       const [newPost] = await conn.query(`
         SELECT p.*, u.username
@@ -137,10 +142,10 @@ const createPost = async (req, res) => {
         LEFT JOIN user u ON p.user_id = u.id
         WHERE p.id = ?
       `, [id]);
-      
+
       // Commit the transaction
       await conn.commit();
-      
+
       // Format the post for the frontend
       const formattedPost = {
         id: newPost.id,
@@ -153,11 +158,12 @@ const createPost = async (req, res) => {
         comments: 0,
         votes: 0
       };
-      
+
       res.status(201).json(formattedPost);
     } catch (error) {
       // Rollback the transaction if anything goes wrong
       await conn.rollback();
+      console.error("SQL Error:", error); // Log the SQL error
       throw error;
     }
   } catch (error) {
@@ -551,3 +557,4 @@ module.exports = {
   getUserPosts,
   canPostInCommunity
 };
+

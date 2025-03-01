@@ -93,7 +93,8 @@ export default function CreatePostModal({ onClose, communityId, onSuccess }: Pro
       const postData = {
         title: postTitle,
         content: postContent,
-        communityId: postType === 'community' ? selectedCommunity : null
+        communityId: postType === 'community' ? selectedCommunity : null,
+        profile_post: postType === 'profile', // Set profile_post based on post type
       };
 
       console.log('Creating post with data:', postData);
@@ -105,9 +106,9 @@ export default function CreatePostModal({ onClose, communityId, onSuccess }: Pro
       }
       
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to create post:', error);
-      setError(error.message || 'Failed to create post');
+      setError(error instanceof Error ? error.message : 'Failed to create post');
     } finally {
       setIsSubmitting(false);
     }

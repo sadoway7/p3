@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PostItem from './PostItem';
 import { useAuth } from '../context/AuthContext';
 import { getCommunityPosts } from '../api/compatibility';
-import { getPosts } from '../api/posts';
+import { getPosts } from '../api/posts-fix';
 import { getCommentCount } from '../api/comments';
 
 interface Post {

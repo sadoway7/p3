@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { checkNotBanned } = require('../middleware/moderation');
-const posts = require('../api/posts.js.new');
+const posts = require('../api/posts.js');
 
 // Middleware to check if the user is authenticated for protected routes
 router.use(authenticateToken);

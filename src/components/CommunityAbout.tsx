@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCommunityAbout } from "../api/communities";
+import { getCommunityAbout } from "../api/communities-fix";
 
 interface CommunityAboutInfo {
   id: string;

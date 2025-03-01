@@ -79,7 +79,7 @@ export default function Community() {
               Activity
               <span className="absolute bottom-0 left-0 w-full h-1 bg-yellow-400"></span>
             </h2>
-            <div className="max-h-[400px] overflow-y-auto">
+            <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
               <ActivityHistory communityId={id || ''} limit={10} />
             </div>
           </div>

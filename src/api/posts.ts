@@ -49,7 +49,8 @@ export async function createPost(
   postData: {
     title: string,
     content: string,
-    communityId: string | null
+    communityId: string | null,
+    profile_post: boolean; // Add the missing field
   },
   token?: string | null
 ) {
