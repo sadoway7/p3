@@ -852,13 +852,17 @@ export async function updateCommunityMemberRole(communityId: string, userId: str
                     [communityId, userId, true, true, true, true]
                 );
             } catch (error) {
+function isDatabaseError(error: unknown): error is { code: string } {
+  return typeof error === 'object' && error !== null && 'code' in error && typeof (error as any).code === 'string';
+}
+
                 // Ignore duplicate key errors (might already have permissions from before)
-                if (error.code !== 'ER_DUP_ENTRY') {
+                if (isDatabaseError(error) && error.code !== 'ER_DUP_ENTRY') {
                     throw error;
                 }
             }
         }
-        
+
         // Log activity
         const activityId = uuidv4();
         await conn.query(
