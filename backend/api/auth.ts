@@ -79,8 +79,7 @@ export async function register(userData: { username: string; email: string; pass
       "SELECT * FROM user WHERE username = ? OR email = ?",
       [userData.username, userData.email]
     );
-    
-    if (existingUser) {
+    if (Array.isArray(existingUser) && existingUser.length > 0) {
       throw new Error('Username or email already exists');
     }
     

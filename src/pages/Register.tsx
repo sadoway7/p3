@@ -76,6 +76,7 @@ export default function Register() {
     }
     
     try {
+      console.debug("Register form data:", { username, email, password, confirmPassword });
       await register(username, email, password);
       // Redirect to home page after successful registration
       navigate('/');

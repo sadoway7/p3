@@ -34,3 +34,13 @@ export interface UpdateCommunityInput {
   bannerImage?: string;
   iconImage?: string;
 }
+
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  community_id: string;
+  username?: string;
+}
