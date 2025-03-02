@@ -1,8 +1,8 @@
 // Use relative URLs for API calls to solve deployment issues
 export function getApiBaseUrl() {
-  // When deployed, we can use relative URLs which will automatically
-  // use the current domain and work in any environment
-  return '';  // Empty string means use relative URLs
+  // Use VITE_API_BASE_URL environment variable if available, otherwise default to relative URLs
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  return apiUrl || ''; // Use VITE_API_BASE_URL or relative URLs if not set
 }
 
 // Function to build API paths
