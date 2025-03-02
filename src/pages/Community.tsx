@@ -4,7 +4,6 @@ import CommunityHeader from '../components/CommunityHeader'
 import PostList from '../components/PostList'
 import CommunityRules from '../components/CommunityRules'
 import CommunityAbout from '../components/CommunityAbout'
-import CommunitySettings from '../components/CommunitySettings'
 import ActivityHistory from '../components/ActivityHistory'
 import CommunityCreatePostModal from '../components/CommunityCreatePostModal'
 import { useAuth } from '../context/AuthContext'
@@ -22,6 +21,12 @@ export default function Community() {
     if (isAuthenticated && user && id) {
       const checkMembership = async () => {
         try {
+          // Admin users have access to all communities
+          if (user.role === 'admin') {
+            setIsMember(true);
+            return;
+          }
+          
           const memberInfo = await getCommunityMember(id, user.id, token);
           setIsMember(!!memberInfo); // Convert to boolean
         } catch (error) {
@@ -90,14 +95,6 @@ export default function Community() {
               <span className="absolute bottom-0 left-0 w-full h-1 bg-pink-400"></span>
             </h2>
             <CommunityRules communityId={id || ''} />
-          </div>
-          
-          <div className="bg-gray-100 p-6 transform rotate-0.5 shadow-md">
-            <h2 className="font-bold mb-4 uppercase tracking-tight text-xl relative inline-block">
-              Settings
-              <span className="absolute bottom-0 left-0 w-full h-1 bg-purple-400"></span>
-            </h2>
-            <CommunitySettings communityId={id || ''} />
           </div>
           
           <div className="bg-gray-100 p-6 transform -rotate-0.5 shadow-md">

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getCommunityDetails } from '../api/compatibility';
+import { getCommunityMember } from '../api/communities';
 import JoinCommunityButton from './JoinCommunityButton';
+import CommunitySettingsModal from './CommunitySettingsModal';
+import { Cog, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface CommunityAbout {
   id: string;
@@ -23,6 +27,8 @@ export default function CommunityHeader({ communityId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMember, setIsMember] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [joinLoading, setJoinLoading] = useState(false);
   const { user, token, isAuthenticated } = useAuth();
 
@@ -57,11 +63,26 @@ export default function CommunityHeader({ communityId }: Props) {
             postCount: stats.postCount,
           });
           
-          // Check if the user is a member
-          if (user) {
-            // This would normally check if the user is a member
-            // For now we'll assume they are for demo purposes
-            setIsMember(true);
+          // Check if the user is a member and their role
+          if (isAuthenticated && user && user.id) {
+            // Check if user is admin (platform-wide)
+            if (user.role === 'admin') {
+              setIsMember(true);
+              setIsModerator(true);
+            } else {
+              try {
+                const memberInfo = await getCommunityMember(communityId, user.id, token);
+                setIsMember(!!memberInfo);
+                
+                if (memberInfo) {
+                  setIsModerator(memberInfo.role === 'moderator' || memberInfo.role === 'admin');
+                }
+              } catch (error) {
+                console.error("Error checking community membership:", error);
+                setIsMember(false);
+                setIsModerator(false);
+              }
+            }
           }
         } else {
           setError('Community not found');
@@ -77,7 +98,7 @@ export default function CommunityHeader({ communityId }: Props) {
     if (communityId) {
       fetchCommunity();
     }
-  }, [communityId, user, token]);
+  }, [communityId, user, token, isAuthenticated]);
 
   // Join and leave functionality is now handled by the JoinCommunityButton component
 
@@ -100,32 +121,63 @@ export default function CommunityHeader({ communityId }: Props) {
   }
 
   return (
-    <div className="bg-white p-6 rounded-md shadow mb-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold">{community.name}</h1>
-          <p className="text-gray-600 mt-2">{community.description}</p>
-          
-          <div className="flex mt-4 text-sm text-gray-500 space-x-4">
-            <div>
-              <span className="font-medium">{community.memberCount}</span> members
-            </div>
-            <div>
-              <span className="font-medium">{community.postCount}</span> posts
-            </div>
-            <div>
-              Created {new Date(community.created_at).toLocaleDateString()}
+    <>
+      <div className="bg-white p-6 rounded-md shadow mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold">{community.name}</h1>
+            <p className="text-gray-600 mt-2">{community.description}</p>
+            
+            <div className="flex mt-4 text-sm text-gray-500 space-x-4">
+              <div>
+                <span className="font-medium">{community.memberCount}</span> members
+              </div>
+              <div>
+                <span className="font-medium">{community.postCount}</span> posts
+              </div>
+              <div>
+                Created {new Date(community.created_at).toLocaleDateString()}
+              </div>
             </div>
           </div>
+          
+          <div className="flex gap-2">
+            {isModerator && (
+              <>
+                <button
+                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center"
+                  onClick={() => setShowSettingsModal(true)}
+                >
+                  <Cog className="w-4 h-4 mr-1" />
+                  Settings
+                </button>
+                
+                <Link
+                  to={`/community/${communityId}/moderation`}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                >
+                  <Shield className="w-4 h-4 mr-1" />
+                  Moderation
+                </Link>
+              </>
+            )}
+            
+            <JoinCommunityButton
+              communityId={community.id}
+              className={`px-4 py-2 rounded-md`}
+              onJoin={() => setIsMember(true)}
+              onLeave={() => setIsMember(false)}
+            />
+          </div>
         </div>
-        
-        <JoinCommunityButton 
-          communityId={community.id}
-          className={`px-4 py-2 rounded-md`}
-          onJoin={() => setIsMember(true)}
-          onLeave={() => setIsMember(false)}
-        />
       </div>
-    </div>
+      
+      {showSettingsModal && (
+        <CommunitySettingsModal
+          communityId={communityId}
+          onClose={() => setShowSettingsModal(false)}
+        />
+      )}
+    </>
   );
 }

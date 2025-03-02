@@ -83,23 +83,23 @@ const ActivityHistory: React.FC<ActivityHistoryProps> = ({
   };
   
   if (loading && activities.length === 0) {
-    return <div className="text-center py-4">Loading activities...</div>;
+    return <div className="text-center py-2">Loading activities...</div>;
   }
   
   if (error && activities.length === 0) {
     return (
-      <div className="text-center text-red-500 py-4">
+      <div className="text-center text-red-500 py-2">
         Error loading activities: {error}
       </div>
     );
   }
   
   if (activities.length === 0) {
-    return <div className="text-center py-4">No activities found.</div>;
+    return <div className="text-center py-2">No recent activity.</div>;
   }
   
   return (
-    <div className="activity-history mt-4">
+    <div className="activity-history">
       {showFilters && (
         <div className="filters mb-4 flex gap-2 flex-wrap">
           <select 

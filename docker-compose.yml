@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  rumfor-app:
+    build: .
+    container_name: rumfor-app
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    env_file:
+      - .env.docker
+    restart: unless-stopped
+    volumes:
+      # Mount these if you want to persist data between container rebuilds
+      # - ./data:/app/data
+      # Uncomment if you want logs persisted
+      # - ./logs:/app/logs

@@ -11,7 +11,7 @@ interface CommunityAboutInfo {
   moderators: {
     community_id: string;
     user_id: string;
-    role: 'moderator' | 'admin';
+    role: 'moderator' | 'admin' | 'member';
     username: string;
     joined_at: string;
   }[];
@@ -61,8 +61,7 @@ export default function CommunityAbout({ communityId }: Props) {
 
   if (loading) {
     return (
-      <div className="card p-4">
-        <h2 className="font-medium mb-2">About</h2>
+      <div>
         <div className="text-sm text-gray-600">
           <p>Loading community information...</p>
         </div>
@@ -72,8 +71,7 @@ export default function CommunityAbout({ communityId }: Props) {
 
   if (error) {
     return (
-      <div className="card p-4">
-        <h2 className="font-medium mb-2">About</h2>
+      <div>
         <div className="text-sm text-red-600">
           <p>Error: {error}</p>
         </div>
@@ -83,8 +81,7 @@ export default function CommunityAbout({ communityId }: Props) {
 
   if (!communityAbout) {
     return (
-      <div className="card p-4">
-        <h2 className="font-medium mb-2">About</h2>
+      <div>
         <div className="text-sm text-gray-600">
           <p>Community not found</p>
         </div>
@@ -93,8 +90,7 @@ export default function CommunityAbout({ communityId }: Props) {
   }
 
   return (
-    <div className="card p-4">
-      <h2 className="font-medium mb-2">About</h2>
+    <div>
       <div className="text-sm text-gray-600 space-y-2">
         <p>Created: {communityAbout.creationDateFormatted}</p>
         <p>Members: {communityAbout.memberCount}</p>

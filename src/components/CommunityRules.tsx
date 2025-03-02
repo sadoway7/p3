@@ -45,7 +45,6 @@ export default function CommunityRules({ communityId }: Props) {
   if (loading) {
     return (
       <div className="bg-white rounded-md shadow p-4 animate-pulse">
-        <h3 className="text-lg font-medium h-5 bg-gray-200 rounded w-1/3 mb-4"></h3>
         <div className="space-y-3">
           <div className="h-4 bg-gray-200 rounded w-5/6"></div>
           <div className="h-4 bg-gray-200 rounded w-4/6"></div>
@@ -59,16 +58,14 @@ export default function CommunityRules({ communityId }: Props) {
   if (rules.length === 0) {
     return (
       <div className="bg-white rounded-md shadow p-4">
-        <h3 className="text-lg font-medium">Community Rules</h3>
-        <p className="text-gray-500 mt-2">No rules have been set for this community yet.</p>
+        <p className="text-gray-500">No rules have been set for this community yet.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-md shadow p-4">
-      <h3 className="text-lg font-medium">Community Rules</h3>
-      <ol className="mt-3 space-y-3 list-decimal list-inside">
+      <ol className="space-y-3 list-decimal list-inside">
         {rules.map((rule) => (
           <li key={rule.id} className="text-gray-700">
             <span className="font-medium">{rule.title}</span>

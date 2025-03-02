@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getCommunitySettings, updateCommunitySettings, updateCommunity } from '../api/communities';
 import { getCommunity, getCommunityMember } from '../api/communities-fix';
@@ -27,9 +28,10 @@ interface Community {
 
 interface Props {
   communityId: string;
+  onClose: () => void;
 }
 
-export default function CommunitySettings({ communityId }: Props) {
+export default function CommunitySettingsModal({ communityId, onClose }: Props) {
   const { user, token } = useAuth();
   const [settings, setSettings] = useState<CommunitySettings | null>(null);
   const [community, setCommunity] = useState<Community | null>(null);
@@ -180,25 +182,6 @@ export default function CommunitySettings({ communityId }: Props) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="card p-4">
-        <h2 className="font-medium mb-2">Community Settings</h2>
-        <p className="text-sm text-gray-600">Loading settings...</p>
-      </div>
-    );
-  }
-
-  // Don't show error, show appropriate message
-  if (!settings && !community) {
-    return (
-      <div className="card p-4">
-        <h2 className="font-medium mb-2">Community Settings</h2>
-        <p className="text-sm text-gray-600">Settings not available</p>
-      </div>
-    );
-  }
-
   const handleJoinMethodChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (!settings) return;
     
@@ -221,72 +204,91 @@ export default function CommunitySettings({ communityId }: Props) {
     }
   };
 
-  // We need both settings and community to render the form
-  if (!settings || !community) {
+  if (loading) {
     return (
-      <div className="card p-4">
-        <h2 className="font-medium mb-2">Community Settings</h2>
-        <p className="text-sm text-gray-600">Loading settings...</p>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg w-full max-w-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-medium">Community Settings</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!settings || !community || !isModerator) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg w-full max-w-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-medium">Community Settings</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          {error ? (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              You don't have permission to modify community settings.
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="text-sm text-gray-600 space-y-3">
-        {!isModerator ? (
-          <div>
-            <p>
-              {community.privacy === 'public' ? 'Public community' : 'Private community'}
-              {settings.join_method === 'auto_approve' && ' • Auto-approve joins'}
-              {settings.join_method === 'requires_approval' && ' • Approval required to join'}
-              {settings.join_method === 'invite_only' && ' • Invite only'}
-            </p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pt-2">
+          <h2 className="text-xl font-bold">Community Settings</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
           </div>
-        ) : (
-          <>
-            <div className="mt-2">
-              <label className="flex items-center">
+        )}
+        
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-medium text-lg mb-3">General Settings</h3>
+            
+            <div className="mb-4">
+              <label className="flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={community.privacy === 'public'}
                   onChange={handleTogglePrivacy}
                   disabled={saving}
-                  className="mr-2"
+                  className="mr-2 h-5 w-5"
                 />
-                Public Community
+                <span>Public Community</span>
+                <span className="ml-1 text-sm text-gray-500">
+                  {community.privacy === 'public' 
+                    ? '- Anyone can view' 
+                    : '- Only members can view'}
+                </span>
               </label>
             </div>
             
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.allow_post_images}
-                  onChange={handleTogglePostImages}
-                  disabled={saving}
-                  className="mr-2"
-                />
-                Allow Post Images
-              </label>
-            </div>
-            
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.allow_post_links}
-                  onChange={handleTogglePostLinks}
-                  disabled={saving}
-                  className="mr-2"
-                />
-                Allow Post Links
-              </label>
-            </div>
-            
-            <div className="mt-4">
+            <div className="mb-4">
               <label className="block mb-2 font-medium">Join Method:</label>
-              <select
+              <select 
                 value={settings.join_method}
                 onChange={handleJoinMethodChange}
                 disabled={saving}
@@ -297,21 +299,53 @@ export default function CommunitySettings({ communityId }: Props) {
                 <option value="invite_only">Invite Only (no join requests)</option>
               </select>
             </div>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-medium text-lg mb-3">Post Settings</h3>
             
-            {saving && (
-              <p className="text-blue-600 italic">Saving changes...</p>
-            )}
-            
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <h3 className="font-medium text-gray-800 mb-2">Moderator Controls</h3>
-              <Link
-                to={`/community/${communityId}/moderation`}
-                className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              >
-                Moderation Dashboard
-              </Link>
+            <div className="mb-3">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.allow_post_images}
+                  onChange={handleTogglePostImages}
+                  disabled={saving}
+                  className="mr-2 h-5 w-5"
+                />
+                <span>Allow Post Images</span>
+              </label>
             </div>
-          </>
+            
+            <div className="mb-3">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.allow_post_links}
+                  onChange={handleTogglePostLinks}
+                  disabled={saving}
+                  className="mr-2 h-5 w-5"
+                />
+                <span>Allow Post Links</span>
+              </label>
+            </div>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-medium text-lg mb-3">Moderation</h3>
+            <Link
+              to={`/community/${communityId}/moderation`}
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Moderation Dashboard
+            </Link>
+          </div>
+        </div>
+        
+        {saving && (
+          <div className="mt-4 text-blue-600 italic text-center">
+            Saving changes...
+          </div>
         )}
       </div>
     </div>

@@ -138,9 +138,9 @@ export async function createCommunity(communityData: CommunityInput): Promise<Co
                 id, name, description, privacy, icon_url, banner_url, theme_color
             ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
-                id, 
-                communityData.name, 
-                communityData.description, 
+                id,
+                communityData.name,
+                communityData.description,
                 communityData.privacy || 'public',
                 communityData.icon_url || null,
                 communityData.banner_url || null,
@@ -149,44 +149,61 @@ export async function createCommunity(communityData: CommunityInput): Promise<Co
         );
         
         // Create default settings for the community
-        await conn.query(
-            `INSERT INTO community_setting (
-                community_id, allow_post_images, allow_post_links, join_method,
-                require_post_approval, restricted_words, custom_theme_color,
-                custom_banner_url, minimum_account_age_days, minimum_karma_required,
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [
-                id,
-                true, // allow_post_images
-                true, // allow_post_links
-                'auto_approve', // join_method
-                false, // require_post_approval
-                null, // restricted_words
-                null, // custom_theme_color
-                null, // custom_banner_url
-                0, // minimum_account_age_days
-                0, // minimum_karma_required
-            ]
-        );
+        try {
+            await conn.query(
+                `INSERT INTO community_setting (
+                    community_id, allow_post_images, allow_post_links, join_method,
+                    require_post_approval, restricted_words, custom_theme_color,
+                    custom_banner_url, minimum_account_age_days, minimum_karma_required,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [
+                    id,
+                    true, // allow_post_images
+                    true, // allow_post_links
+                    'auto_approve', // join_method
+                    false, // require_post_approval
+                    null, // restricted_words
+                    null, // custom_theme_color
+                    null, // custom_banner_url
+                    0, // minimum_account_age_days
+                    0, // minimum_karma_required
+                ]
+            );
+        } catch (settingsError) {
+            // If settings creation fails, log but continue (non-critical)
+            console.warn("Warning: Could not create community settings:", settingsError);
+        }
         
-        // Log the activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'CREATE'),
-                ?, 'community', NOW()
-            )`,
-            [
-                activityId, 
-                communityData.creator_id || null, 
-                id
-            ]
-        );
+        // Only log activity if creator_id is provided to avoid NULL constraint violation
+        if (communityData.creator_id) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                        (SELECT id FROM action WHERE name = 'CREATE'),
+                        ?, 'community', NOW()
+                    )`,
+                    [
+                        activityId,
+                        communityData.creator_id,
+                        id
+                    ]
+                );
+                
+                // Add creator as admin if user_id is provided
+                await addCommunityMember(id, communityData.creator_id, 'admin');
+            } catch (activityError) {
+                // If activity logging fails, log but continue (non-critical)
+                console.warn("Warning: Could not log activity or add member:", activityError);
+            }
+        } else {
+            console.log("No creator_id provided, skipping activity logging");
+        }
         
         // Commit the transaction
         await conn.commit();
@@ -205,7 +222,7 @@ export async function createCommunity(communityData: CommunityInput): Promise<Co
     }
 }
 
-export async function updateCommunity(communityId: string, communityData: Partial<CommunityInput>, userId: string): Promise<Community | null> {
+export async function updateCommunity(communityId: string, communityData: Partial<CommunityInput>, userId?: string): Promise<Community | null> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -260,24 +277,30 @@ export async function updateCommunity(communityId: string, communityData: Partia
             values
         );
         
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'UPDATE'),
-                ?, 'community', ?, NOW()
-            )`,
-            [
-                activityId, 
-                userId, 
-                communityId, 
-                JSON.stringify(communityData)
-            ]
-        );
+        // Log activity if userId is provided
+        if (userId) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                        (SELECT id FROM action WHERE name = 'UPDATE'),
+                        ?, 'community', ?, NOW()
+                    )`,
+                    [
+                        activityId,
+                        userId,
+                        communityId,
+                        JSON.stringify(communityData)
+                    ]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log activity for community update:", activityError);
+            }
+        }
         
         // Commit the transaction
         await conn.commit();
@@ -295,7 +318,7 @@ export async function updateCommunity(communityId: string, communityData: Partia
     }
 }
 
-export async function deleteCommunity(communityId: string, userId: string): Promise<boolean> {
+export async function deleteCommunity(communityId: string, userId?: string): Promise<boolean> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -303,24 +326,30 @@ export async function deleteCommunity(communityId: string, userId: string): Prom
         // Start a transaction
         await conn.beginTransaction();
         
-        // Log activity before deletion
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'DELETE'),
-                ?, 'community', ?, NOW()
-            )`,
-            [
-                activityId, 
-                userId, 
-                communityId, 
-                JSON.stringify({ community_id: communityId })
-            ]
-        );
+        // Log activity before deletion if userId is provided
+        if (userId) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                        (SELECT id FROM action WHERE name = 'DELETE'),
+                        ?, 'community', ?, NOW()
+                    )`,
+                    [
+                        activityId,
+                        userId,
+                        communityId,
+                        JSON.stringify({ community_id: communityId })
+                    ]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log community deletion activity:", activityError);
+            }
+        }
         
         // Delete the community itself
         const result = await conn.query("DELETE FROM community WHERE id = ?", [communityId]);
@@ -358,7 +387,7 @@ export async function getCommunityRules(communityId: string): Promise<CommunityR
     }
 }
 
-export async function addCommunityRule(communityId: string, ruleData: CommunityRuleInput, userId: string): Promise<CommunityRule> {
+export async function addCommunityRule(communityId: string, ruleData: CommunityRuleInput, userId?: string): Promise<CommunityRule> {
     let conn;
     try {
         const id = uuidv4();
@@ -379,19 +408,25 @@ export async function addCommunityRule(communityId: string, ruleData: CommunityR
             ]
         );
         
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_RULE'),
-                (SELECT id FROM action WHERE name = 'CREATE'),
-                ?, 'community_rule', NOW()
-            )`,
-            [activityId, userId, id]
-        );
+        // Log activity if userId is provided
+        if (userId) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY_RULE'),
+                        (SELECT id FROM action WHERE name = 'CREATE'),
+                        ?, 'community_rule', NOW()
+                    )`,
+                    [activityId, userId, id]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log rule creation activity:", activityError);
+            }
+        }
         
         // Commit the transaction
         await conn.commit();
@@ -412,7 +447,7 @@ export async function addCommunityRule(communityId: string, ruleData: CommunityR
     }
 }
 
-export async function updateCommunityRule(ruleId: string, ruleData: Partial<CommunityRuleInput>, userId: string): Promise<CommunityRule | null> {
+export async function updateCommunityRule(ruleId: string, ruleData: Partial<CommunityRuleInput>, userId?: string): Promise<CommunityRule | null> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -451,19 +486,25 @@ export async function updateCommunityRule(ruleId: string, ruleData: Partial<Comm
             values
         );
         
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_RULE'),
-                (SELECT id FROM action WHERE name = 'UPDATE'),
-                ?, 'community_rule', NOW()
-            )`,
-            [activityId, userId, ruleId]
-        );
+        // Log activity if userId is provided
+        if (userId) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY_RULE'),
+                        (SELECT id FROM action WHERE name = 'UPDATE'),
+                        ?, 'community_rule', NOW()
+                    )`,
+                    [activityId, userId, ruleId]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log rule update activity:", activityError);
+            }
+        }
         
         // Commit the transaction
         await conn.commit();
@@ -484,7 +525,7 @@ export async function updateCommunityRule(ruleId: string, ruleData: Partial<Comm
     }
 }
 
-export async function deleteCommunityRule(ruleId: string, userId: string): Promise<boolean> {
+export async function deleteCommunityRule(ruleId: string, userId?: string): Promise<boolean> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -502,24 +543,30 @@ export async function deleteCommunityRule(ruleId: string, userId: string): Promi
             return false;
         }
         
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY_RULE'),
-                (SELECT id FROM action WHERE name = 'DELETE'),
-                ?, 'community_rule', ?, NOW()
-            )`,
-            [
-                activityId, 
-                userId, 
-                ruleId, 
-                JSON.stringify({ community_id: rule.community_id })
-            ]
-        );
+        // Log activity if userId is provided
+        if (userId) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY_RULE'),
+                        (SELECT id FROM action WHERE name = 'DELETE'),
+                        ?, 'community_rule', ?, NOW()
+                    )`,
+                    [
+                        activityId,
+                        userId,
+                        ruleId,
+                        JSON.stringify({ community_id: rule.community_id })
+                    ]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log rule deletion activity:", activityError);
+            }
+        }
         
         // Delete the rule
         const result = await conn.query(
@@ -560,7 +607,7 @@ export async function getCommunitySettings(communityId: string): Promise<Communi
     }
 }
 
-export async function updateCommunitySettings(communityId: string, settingsData: CommunitySettingsInput, userId: string): Promise<CommunitySettings | null> {
+export async function updateCommunitySettings(communityId: string, settingsData: CommunitySettingsInput, userId?: string): Promise<CommunitySettings | null> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -657,24 +704,30 @@ export async function updateCommunitySettings(communityId: string, settingsData:
             }
         }
         
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'UPDATE_SETTINGS'),
-                ?, 'community', ?, NOW()
-            )`,
-            [
-                activityId, 
-                userId, 
-                communityId, 
-                JSON.stringify(settingsData)
-            ]
-        );
+        // Log activity if userId is provided
+        if (userId) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                        (SELECT id FROM action WHERE name = 'UPDATE_SETTINGS'),
+                        ?, 'community', ?, NOW()
+                    )`,
+                    [
+                        activityId,
+                        userId,
+                        communityId,
+                        JSON.stringify(settingsData)
+                    ]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log settings update activity:", activityError);
+            }
+        }
         
         // Commit the transaction
         await conn.commit();
@@ -759,11 +812,16 @@ export async function addCommunityMember(communityId: string, userId: string, ro
             [communityId, userId, role]
         );
 
-        // If they had a pending join request, mark it as approved
-        await conn.query(
-            "UPDATE community_join_request SET status = 'approved', updated_at = NOW() WHERE community_id = ? AND user_id = ? AND status = 'pending'",
-            [communityId, userId]
-        );
+        // If they had a pending join request, try to mark it as approved
+        try {
+            await conn.query(
+                "UPDATE community_join_request SET status = 'approved', updated_at = NOW() WHERE community_id = ? AND user_id = ? AND status = 'pending'",
+                [communityId, userId]
+            );
+        } catch (error) {
+            // If this fails, it's likely the table doesn't exist yet, so we can ignore it
+            console.log("Note: Could not update join request, but continuing:", error);
+        }
 
         // Get user details
         const [user] = await conn.query(
@@ -772,29 +830,37 @@ export async function addCommunityMember(communityId: string, userId: string, ro
         );
 
         // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?,
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'JOIN'),
-                ?, 'community', ?, NOW()
-            )`,
-            [
-                activityId,
-                userId,
-                communityId,
-                JSON.stringify({ role })
-            ]
-        );
+        try {
+            const activityId = uuidv4();
+            await conn.query(
+                `INSERT INTO activity (
+                    id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+                ) VALUES (
+                    ?, ?,
+                    (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                    (SELECT id FROM action WHERE name = 'JOIN'),
+                    ?, 'community', ?, NOW()
+                )`,
+                [
+                    activityId,
+                    userId,
+                    communityId,
+                    JSON.stringify({ role })
+                ]
+            );
+        } catch (activityError) {
+            console.warn("Warning: Could not log activity, but continuing:", activityError);
+        }
 
         // Update user statistics
-        await conn.query(
-            "UPDATE user_statistic SET communities_joined = communities_joined + 1 WHERE user_id = ?",
-            [userId]
-        );
+        try {
+            await conn.query(
+                "UPDATE user_statistic SET communities_joined = communities_joined + 1 WHERE user_id = ?",
+                [userId]
+            );
+        } catch (statError) {
+            console.warn("Warning: Could not update user statistics, but continuing:", statError);
+        }
 
         // Commit the transaction
         await conn.commit();
@@ -816,7 +882,7 @@ export async function addCommunityMember(communityId: string, userId: string, ro
         if (conn) conn.release();
     }
 }
-export async function updateCommunityMemberRole(communityId: string, userId: string, role: 'member' | 'moderator' | 'admin', updatedBy: string): Promise<CommunityMember | null> {
+export async function updateCommunityMemberRole(communityId: string, userId: string, role: 'member' | 'moderator' | 'admin', updatedBy?: string): Promise<CommunityMember | null> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -863,24 +929,30 @@ function isDatabaseError(error: unknown): error is { code: string } {
             }
         }
 
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'UPDATE_MEMBER_ROLE'),
-                ?, 'community', ?, NOW()
-            )`,
-            [
-                activityId, 
-                updatedBy, 
-                communityId, 
-                JSON.stringify({ user_id: userId, role })
-            ]
-        );
+        // Log activity if updatedBy is provided
+        if (updatedBy) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                        (SELECT id FROM action WHERE name = 'UPDATE_MEMBER_ROLE'),
+                        ?, 'community', ?, NOW()
+                    )`,
+                    [
+                        activityId,
+                        updatedBy,
+                        communityId,
+                        JSON.stringify({ user_id: userId, role })
+                    ]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log member role update activity:", activityError);
+            }
+        }
         
         // Commit the transaction
         await conn.commit();
@@ -942,24 +1014,32 @@ export async function removeCommunityMember(communityId: string, userId: string)
         }
         
         // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = 'LEAVE'),
-                ?, 'community', NOW()
-            )`,
-            [activityId, userId, communityId]
-        );
+        try {
+            const activityId = uuidv4();
+            await conn.query(
+                `INSERT INTO activity (
+                    id, user_id, activity_type_id, action_id, entity_id, entity_type, created_at
+                ) VALUES (
+                    ?, ?,
+                    (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                    (SELECT id FROM action WHERE name = 'LEAVE'),
+                    ?, 'community', NOW()
+                )`,
+                [activityId, userId, communityId]
+            );
+        } catch (activityError) {
+            console.warn("Warning: Could not log leave community activity:", activityError);
+        }
         
         // Update user statistics
-        await conn.query(
-            "UPDATE user_statistic SET communities_joined = GREATEST(0, communities_joined - 1) WHERE user_id = ?",
-            [userId]
-        );
+        try {
+            await conn.query(
+                "UPDATE user_statistic SET communities_joined = GREATEST(0, communities_joined - 1) WHERE user_id = ?",
+                [userId]
+            );
+        } catch (statError) {
+            console.warn("Warning: Could not update user statistics:", statError);
+        }
         
         // Commit the transaction
         await conn.commit();
@@ -1066,7 +1146,7 @@ export async function createJoinRequest(communityId: string, userId: string): Pr
     }
 }
 
-export async function updateJoinRequest(requestId: string, status: 'approved' | 'rejected', moderatorId: string): Promise<JoinRequest | null> {
+export async function updateJoinRequest(requestId: string, status: 'approved' | 'rejected', moderatorId?: string): Promise<JoinRequest | null> {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -1095,25 +1175,31 @@ export async function updateJoinRequest(requestId: string, status: 'approved' | 
             await addCommunityMember(request.community_id, request.user_id, 'member');
         }
         
-        // Log activity
-        const activityId = uuidv4();
-        await conn.query(
-            `INSERT INTO activity (
-                id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
-            ) VALUES (
-                ?, ?, 
-                (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
-                (SELECT id FROM action WHERE name = ?),
-                ?, 'community_join_request', ?, NOW()
-            )`,
-            [
-                activityId, 
-                moderatorId, 
-                status === 'approved' ? 'APPROVE' : 'REJECT',
-                requestId, 
-                JSON.stringify({ community_id: request.community_id, user_id: request.user_id })
-            ]
-        );
+        // Log activity if moderatorId is provided
+        if (moderatorId) {
+            try {
+                const activityId = uuidv4();
+                await conn.query(
+                    `INSERT INTO activity (
+                        id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata, created_at
+                    ) VALUES (
+                        ?, ?,
+                        (SELECT id FROM activity_type WHERE name = 'COMMUNITY'),
+                        (SELECT id FROM action WHERE name = ?),
+                        ?, 'community_join_request', ?, NOW()
+                    )`,
+                    [
+                        activityId,
+                        moderatorId,
+                        status === 'approved' ? 'APPROVE' : 'REJECT',
+                        requestId,
+                        JSON.stringify({ community_id: request.community_id, user_id: request.user_id })
+                    ]
+                );
+            } catch (activityError) {
+                console.warn("Warning: Could not log join request activity:", activityError);
+            }
+        }
         
         // Commit the transaction
         await conn.commit();
