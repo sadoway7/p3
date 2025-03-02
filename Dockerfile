@@ -23,7 +23,7 @@ RUN npm run build
 RUN npm run backend:build
 
 # Environment variables will be provided by Unraid UI
-ENV VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=http://localhost:3001
 ENV NODE_ENV=production
 
 # Expose ports
