@@ -8,6 +8,7 @@ import Login from '../pages/Login'
 import Register from '../pages/Register'
 import PostDetail from '../pages/PostDetail'
 import CommunityModeration from '../pages/CommunityModeration'
+import DebugPage from '../debug'
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
       { path: 'post/:postId', element: <PostDetail /> },
+      { path: 'debug', element: <DebugPage /> },
     ],
   },
 ])
