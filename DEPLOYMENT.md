@@ -88,8 +88,41 @@ The solution works through direct modification:
 
 ## Accessing Your Application
 
+### Default Access
 - Frontend: http://unraid-ip:3000
 - Backend API: http://unraid-ip:3001
+
+### Domain Configuration
+The application has been configured to support the following domains:
+- l2.sadoway.ca
+- rumfor.com
+
+#### Setting Up Domain Access on Unraid
+
+To properly route these domains to your application running in Docker on Unraid, you'll need to set up a reverse proxy. Here's how to do it:
+
+1. **Install Nginx Proxy Manager on Unraid**:
+   - Go to the Apps tab in the Unraid web UI
+   - Search for "Nginx Proxy Manager"
+   - Install it using the default settings
+
+2. **Configure Nginx Proxy Manager**:
+   - Access Nginx Proxy Manager UI (usually at http://unraid-ip:81)
+   - Add a new proxy host for each domain:
+     - Domain: l2.sadoway.ca
+     - Scheme: http
+     - Forward Hostname/IP: [your-docker-container-ip]
+     - Forward Port: 3000
+     - Enable SSL (recommended)
+   - Repeat for rumfor.com
+
+3. **DNS Configuration**:
+   - Make sure both domains (l2.sadoway.ca and rumfor.com) have DNS A records pointing to your Unraid server's public IP
+   - If using a home server, configure port forwarding on your router (ports 80 and 443) to your Unraid server
+
+4. **API Domain Configuration**:
+   - The frontend needs to know where to find the API
+   - In your .env.docker file, update the VITE_API_BASE_URL to use a domain if needed
 
 ## Troubleshooting
 

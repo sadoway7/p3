@@ -35,5 +35,13 @@ RUN echo '#!/bin/sh \n \
   node backend/dist/index.js & \n \
   npx serve -s dist -l 3000 \n' > /app/start.sh && chmod +x /app/start.sh
 
+# Create a better startup script with host configuration
+RUN echo '#!/bin/sh \n \
+  cd /app \n \
+  echo "Starting backend server..." \n \
+  node backend/dist/index.js & \n \
+  echo "Starting frontend server..." \n \
+  npx vite preview --host 0.0.0.0 --port 3000 \n' > /app/start.sh && chmod +x /app/start.sh
+
 # Start application
 CMD ["/app/start.sh"]

@@ -5,13 +5,28 @@ services:
     build: .
     container_name: rumfor-app
     ports:
-      - "3000:3000"
-      - "3001:3001"
+      - "3000:3000" # Frontend
+      - "3001:3001" # Backend API
     env_file:
       - .env.docker
     restart: unless-stopped
-    volumes:
-      # Mount these if you want to persist data between container rebuilds
-      # - ./data:/app/data
-      # Uncomment if you want logs persisted
-      # - ./logs:/app/logs
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+    networks:
+      - app_network
+    labels:
+      # These labels help if you're using automated reverse proxy like Traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.rumfor-app-frontend.rule=Host(`l2.sadoway.ca`) || Host(`rumfor.com`)"
+      - "traefik.http.routers.rumfor-app-frontend.entrypoints=websecure"
+      - "traefik.http.routers.rumfor-app-frontend.tls=true"
+      - "traefik.http.services.rumfor-app-frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.rumfor-app-api.rule=(Host(`l2.sadoway.ca`) || Host(`rumfor.com`)) && PathPrefix(`/api`)"
+      - "traefik.http.routers.rumfor-app-api.entrypoints=websecure"
+      - "traefik.http.routers.rumfor-app-api.tls=true"
+      - "traefik.http.services.rumfor-app-api.loadbalancer.server.port=3001"
+
+networks:
+  app_network:
+    driver: bridge
