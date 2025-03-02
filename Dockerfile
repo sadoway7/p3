@@ -5,7 +5,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.docker.json ./package.json
 COPY backend/package*.json ./backend/
 
 # Install dependencies

@@ -2,6 +2,25 @@
 
 This guide explains how to deploy the application to a Docker container on Unraid using GitHub as the source repository.
 
+## Platform Compatibility Note
+
+The application was originally developed on Windows, but Docker runs on Linux. To address platform compatibility issues:
+
+1. We've created a special `package.docker.json` file that excludes Windows-specific dependencies
+2. The Dockerfile uses this version instead of the regular package.json
+3. This prevents errors with packages like `@rollup/rollup-win32-x64-msvc` that are Windows-only
+
+### Maintaining package.docker.json
+
+When you add new dependencies to the project:
+
+1. Update the regular package.json as usual (npm install, etc.)
+2. Run the sync script to update package.docker.json:
+   ```bash
+   node sync-package-files.js
+   ```
+3. This script will automatically create an updated package.docker.json without Windows-specific dependencies
+
 ## Prerequisites
 
 - Git installed on your Unraid server
@@ -38,7 +57,13 @@ This guide explains how to deploy the application to a Docker container on Unrai
    chmod +x update.sh
    ```
 
-6. Run the update script to build and start the container
+6. Make the update script executable (on Linux/Mac)
+   ```bash
+   chmod +x update.sh sync-package-files.js
+   ```
+   Note: This step is only needed on Linux/Mac. On Windows, the permissions will be handled by Docker.
+
+7. Run the update script to build and start the container
    ```bash
    source .env.docker && ./update.sh
    ```

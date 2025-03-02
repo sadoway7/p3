@@ -4,6 +4,10 @@
 # Pull latest changes
 git pull
 
+# Note: This script assumes package.docker.json exists and is maintained
+# If you've added new dependencies, make sure to update package.docker.json
+# to avoid platform compatibility issues (Windows vs Linux)
+
 # Rebuild Docker image
 docker build -t rumfor-app:latest .
 
