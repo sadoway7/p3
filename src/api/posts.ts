@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiBaseUrl } from './apiUtils';
+
+const API_BASE_URL = getApiBaseUrl();
 
 export async function getPosts(communityId?: string | null, token?: string | null) {
   const headers: Record<string, string> = {};
