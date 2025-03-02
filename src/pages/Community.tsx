@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import CommunityHeader from '../components/CommunityHeader'
 import PostList from '../components/PostList'
@@ -6,14 +6,35 @@ import CommunityRules from '../components/CommunityRules'
 import CommunityAbout from '../components/CommunityAbout'
 import CommunitySettings from '../components/CommunitySettings'
 import ActivityHistory from '../components/ActivityHistory'
-import CreatePostModal from '../components/CreatePostModal'
+import CommunityCreatePostModal from '../components/CommunityCreatePostModal'
 import { useAuth } from '../context/AuthContext'
+import { getCommunityMember } from '../api/communities'
 import ModeratorDebug from '../debug/ModeratorDebug'
 
 export default function Community() {
   const { id } = useParams()
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const { isAuthenticated } = useAuth()
+  const [isMember, setIsMember] = useState(false)
+  const { isAuthenticated, user, token } = useAuth()
+  
+  // Check if user is a member of the community
+  useEffect(() => {
+    if (isAuthenticated && user && id) {
+      const checkMembership = async () => {
+        try {
+          const memberInfo = await getCommunityMember(id, user.id, token);
+          setIsMember(!!memberInfo); // Convert to boolean
+        } catch (error) {
+          console.error("Error checking community membership:", error);
+          setIsMember(false);
+        }
+      };
+      
+      checkMembership();
+    } else {
+      setIsMember(false);
+    }
+  }, [id, isAuthenticated, user, token]);
 
   const handlePostCreated = () => {
     // Refresh the page or update the post list
@@ -26,8 +47,8 @@ export default function Community() {
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-2">
         <div className="lg:col-span-3">
-          {/* Create Post Button - Anti-design style with color accents */}
-          {isAuthenticated && (
+          {/* Create Post Button - Only show if user is authenticated and a community member */}
+          {isAuthenticated && isMember ? (
             <button
               onClick={() => setShowCreateModal(true)}
               className="w-full p-6 bg-black text-white mb-8 hover:bg-gray-900 flex items-center justify-center transform hover:skew-y-1 transition-transform shadow-lg relative overflow-hidden group"
@@ -37,7 +58,12 @@ export default function Community() {
               </span>
               <span className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-pink-400 to-purple-500 transform translate-x-0 group-hover:translate-y-1 transition-transform"></span>
             </button>
-          )}
+          ) : isAuthenticated ? (
+            <div className="w-full p-4 bg-gray-100 text-gray-700 mb-8 text-center border border-gray-300 rounded">
+              <p>You must be a member of this community to create posts</p>
+              <p className="text-sm mt-1">Join the community to contribute</p>
+            </div>
+          ) : null}
           
           {/* Latest Posts - Anti-design style with color accents */}
           <div className="bg-gray-100 p-8 mb-8 relative transform -rotate-0.5 shadow-lg">
@@ -90,10 +116,11 @@ export default function Community() {
       </div>
 
       {showCreateModal && (
-        <CreatePostModal 
-          onClose={() => setShowCreateModal(false)} 
-          communityId={id}
+        <CommunityCreatePostModal
+          onClose={() => setShowCreateModal(false)}
+          communityId={id || ''}
           onSuccess={handlePostCreated}
+          isMember={isMember}
         />
       )}
     </div>

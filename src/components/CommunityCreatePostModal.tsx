@@ -1,32 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getUserCommunities } from '../api/communities';
 import { createPost } from '../api/posts';
+import { getCommunity } from '../api/communities';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
   onClose: () => void;
-  communityId?: string;
+  communityId: string;
+  communityName?: string;
   onSuccess?: (postId: string) => void;
+  isMember?: boolean;
 }
 
-interface Community {
-  id: string;
-  name: string;
-}
-
-export default function CreatePostModal({ onClose, communityId, onSuccess }: Props) {
-  const [postType, setPostType] = useState<'community' | 'profile'>(communityId ? 'community' : 'profile');
-  const [selectedCommunity, setSelectedCommunity] = useState<string>(communityId || '');
+export default function CommunityCreatePostModal({ onClose, communityId, communityName: propCommunityName, onSuccess, isMember = true }: Props) {
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
-  const [userCommunities, setUserCommunities] = useState<Community[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [communityName, setCommunityName] = useState<string | undefined>(propCommunityName);
   const { user, isAuthenticated, token } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch community data if communityName is not provided
+  useEffect(() => {
+    if (!propCommunityName && communityId) {
+      const fetchCommunity = async () => {
+        try {
+          const community = await getCommunity(communityId);
+          if (community) {
+            setCommunityName(community.name);
+          }
+        } catch (error) {
+          console.error('Failed to fetch community details:', error);
+        }
+      };
+      
+      fetchCommunity();
+    }
+  }, [communityId, propCommunityName]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -35,44 +47,11 @@ export default function CreatePostModal({ onClose, communityId, onSuccess }: Pro
     }
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!isAuthenticated || !user) return;
-      
-      try {
-        setLoading(true);
-        console.log('Fetching communities user is a member of...');
-        const communities = await getUserCommunities(user.id);
-        console.log('User communities:', communities);
-        
-        // Make sure we're getting user's joined communities
-        if (Array.isArray(communities)) {
-          setUserCommunities(communities);
-        } else {
-          console.error('Invalid communities data:', communities);
-          setError('Failed to load your communities - invalid data format');
-        }
-      } catch (error) {
-        console.error('Failed to fetch communities:', error);
-        setError('Failed to load your communities');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [isAuthenticated, user, token]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isAuthenticated) {
       setError('You must be logged in to create a post');
-      return;
-    }
-    
-    if (postType === 'community' && !selectedCommunity) {
-      setError('Please select a community');
       return;
     }
     
@@ -90,11 +69,13 @@ export default function CreatePostModal({ onClose, communityId, onSuccess }: Pro
     setError(null);
 
     try {
+      // Generate a UUID for the post
       const postData = {
+        id: crypto.randomUUID(),
         title: postTitle,
         content: postContent,
-        communityId: postType === 'community' ? selectedCommunity : null,
-        profile_post: postType === 'profile', // Set profile_post based on post type
+        communityId: communityId,
+        profile_post: false
       };
 
       console.log('Creating post with data:', postData);
@@ -118,7 +99,9 @@ export default function CreatePostModal({ onClose, communityId, onSuccess }: Pro
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-md">
         <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-medium">Create Post</h2>
+          <h2 className="text-lg font-medium">
+            Create Post {communityName && `in r/${communityName}`}
+          </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
@@ -130,58 +113,24 @@ export default function CreatePostModal({ onClose, communityId, onSuccess }: Pro
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {!communityId && (
-            <>
-              <div className="flex space-x-4">
-                <button
-                  type="button"
-                  onClick={() => setPostType('community')}
-                  className={`px-4 py-2 wireframe-border ${
-                    postType === 'community' ? 'bg-gray-100' : ''
-                  }`}
-                >
-                  Community
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostType('profile')}
-                  className={`px-4 py-2 wireframe-border ${
-                    postType === 'profile' ? 'bg-gray-100' : ''
-                  }`}
-                >
-                  Profile
-                </button>
-              </div>
-
-              {postType === 'community' && (
-                <div>
-                  <label htmlFor="community" className="block text-sm font-medium text-gray-700 mb-1">
-                    Community
-                  </label>
-                  <select
-                    id="community"
-                    value={selectedCommunity}
-                    onChange={(e) => setSelectedCommunity(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    required
-                    disabled={isSubmitting || loading}
-                  >
-                    <option value="">Select a community</option>
-                    {userCommunities.map((community) => (
-                      <option key={community.id} value={community.id}>
-                        r/{community.name}
-                      </option>
-                    ))}
-                  </select>
-                  {loading && (
-                    <p className="text-sm text-gray-500 mt-1">Loading your communities...</p>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
+        {!isMember ? (
+          <div className="p-4 space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded">
+              <h3 className="font-bold mb-2">Membership Required</h3>
+              <p>You need to join this community before you can create posts.</p>
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
               Title
@@ -232,7 +181,8 @@ export default function CreatePostModal({ onClose, communityId, onSuccess }: Pro
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
-  )
+  );
 }

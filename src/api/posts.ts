@@ -54,6 +54,13 @@ export async function createPost(
   },
   token?: string | null
 ) {
+  // Generate a UUID for the post
+  // The backend will still generate its own UUID, but this ensures we pass an id field in the request
+  const postWithId = {
+    ...postData,
+    id: crypto.randomUUID() // Use browser's crypto API to generate UUID
+  };
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -65,7 +72,7 @@ export async function createPost(
   const response = await fetch(`${API_BASE_URL}/api/posts`, {
     method: 'POST',
     headers,
-    body: JSON.stringify(postData)
+    body: JSON.stringify(postWithId)
   });
   
   if (!response.ok) {

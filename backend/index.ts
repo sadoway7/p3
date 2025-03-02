@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import express, { Request, Response, NextFunction } from 'express';
 import mariadb from 'mariadb';
 import cors from 'cors';
@@ -1138,77 +1139,45 @@ app.get('/api/posts/:id', async (req: Request, res: Response): Promise<void> => 
 
 
 app.post('/api/posts', authenticateToken, canPostInCommunity, async (req: AuthRequest, res: Response): Promise<void> => {
-
-    const { title, content, communityId, userProfileId, isProfilePost } = req.body;
-
+    const { title, content, communityId, userProfileId, isProfilePost, id } = req.body;
     const authorId = req.user.id;
-
     
-
     let conn;
-
     try {
-
         conn = await pool.getConnection();
-
         
-
         // Determine if this is a profile post
-
         const profilePost = isProfilePost || !!userProfileId;
-
         
+        // Use provided ID from client or generate a new one
+        const postId = id || uuidv4();
+        console.log('Using post ID:', postId);
 
-        // Build the query based on whether this is a community post or profile post
-
-        let query = "INSERT INTO post (title, content, user_id";
-
-        const params = [title, content, authorId];
-
+        // Build the query based on the available data
+        let query;
+        let params;
         
-
         if (communityId) {
-
-            query += ", community_id, profile_post) VALUES (?, ?, ?, ?, ?)";
-
-            params.push(communityId, profilePost);
-
+            query = "INSERT INTO post (id, title, content, user_id, community_id, profile_post) VALUES (?, ?, ?, ?, ?, ?)";
+            params = [postId, title, content, authorId, communityId, profilePost];
         } else if (userProfileId) {
-
-            query += ", user_profile_id, profile_post) VALUES (?, ?, ?, ?, ?)";
-
-            params.push(userProfileId, profilePost);
-
+            query = "INSERT INTO post (id, title, content, user_id, user_profile_id, profile_post) VALUES (?, ?, ?, ?, ?, ?)";
+            params = [postId, title, content, authorId, userProfileId, profilePost];
         } else {
-
-            query += ", profile_post) VALUES (?, ?, ?, ?)";
-
-            params.push(profilePost);
-
+            query = "INSERT INTO post (id, title, content, user_id, profile_post) VALUES (?, ?, ?, ?, ?)";
+            params = [postId, title, content, authorId, profilePost];
         }
-
         
-
         const result = await conn.query(query, params);
-
         
-
-        const [newPost] = await conn.query("SELECT * FROM post WHERE id = ?", [result.insertId]);
-
+        const [newPost] = await conn.query("SELECT * FROM post WHERE id = ?", [postId]);
         res.status(201).json(newPost);
-
     } catch (error) {
-
         console.error("Error creating post:", error);
-
         res.status(500).json({ error: 'Failed to create post' });
-
     } finally {
-
         if (conn) conn.end();
-
     }
-
 });
 
 
