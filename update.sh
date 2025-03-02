@@ -31,6 +31,10 @@ docker run -d --name rumfor-app -p 3000:3000 -p 3001:3001 \
   -e VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api} \
   -e GIT_REPO_URL=$(git config --get remote.origin.url) \
   -v ${REPO_DIR}/.git:/app/.git \
+  echo "Starting backend server..." \n \
+  cd backend && npm start & \n \
+  echo "Starting frontend server with API proxy..." \n \
+  npx vite preview --host 0.0.0.0 --port 3000 \n \
   rumfor-app:latest
 
 echo "Application updated successfully!"
