@@ -4,13 +4,13 @@
 # Pull latest changes
 git pull
 
-# Note: We use fix-package-json.js during Docker build to automatically
-# handle platform compatibility issues between Windows and Linux
+# Completely remove the old image and container to force a clean rebuild
+docker stop rumfor-app || true
+docker rm rumfor-app || true
+docker rmi rumfor-app:latest || true
 
-# Rebuild Docker image with additional arguments to help with compatibility
-docker build -t rumfor-app:latest \
-  --build-arg NPM_CONFIG_PLATFORM=linux \
-  --build-arg NODE_ENV=production .
+# Rebuild Docker image from scratch (no cache)
+docker build --no-cache -t rumfor-app:latest .
 
 # Stop and remove old container
 docker stop rumfor-app || true

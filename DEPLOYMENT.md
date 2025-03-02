@@ -6,20 +6,23 @@ This guide explains how to deploy the application to a Docker container on Unrai
 
 The application was originally developed on Windows, but Docker runs on Linux. To address platform compatibility issues:
 
-1. We've created a script (`fix-package-json.js`) that automatically removes Windows-specific dependencies
-2. The Dockerfile runs this script during the build process
-3. This prevents errors with packages like `@rollup/rollup-win32-x64-msvc` that are Windows-only
+1. We've directly removed Windows-specific dependencies from package.json
+2. Specifically, we removed `@rollup/rollup-win32-x64-msvc` and the local file reference
+3. This prevents the platform compatibility errors during npm install
 
 ### How it works
 
-The solution works as follows:
+The solution works through direct modification:
 
-1. During Docker build, the `fix-package-json.js` script:
-   - Automatically detects and removes Windows-specific packages
-   - Removes any `file:` dependencies that won't work in Docker
-   - Creates backups of the original package.json files
+1. The package.json file has been modified to remove:
+   - The Windows-specific package: `@rollup/rollup-win32-x64-msvc`
+   - The local file reference: `vite-react-typescript-starter: file:`
    
-2. This approach requires no manual maintenance when you add new dependencies
+2. The Dockerfile is now simplified to just copy and use the clean package.json
+
+3. If you add new dependencies in the future that are platform-specific, you'll need to:
+   - Add them only to your development environment
+   - Make sure they're not in the package.json that gets committed to GitHub
 
 ## Prerequisites
 
