@@ -42,7 +42,7 @@ RUN echo '#!/bin/sh \n \
   echo "Setting up backend environment..." \n \
   export HOST=0.0.0.0 \n \
   echo "Starting backend server..." \n \
-  npm start & \n \
+  cd backend && npm start & \n \
   cd /app \n \
   echo "Starting frontend server with API proxy..." \n \
   npx vite preview --host 0.0.0.0 --port 3000 \n' > /app/start.sh && chmod +x /app/start.sh
