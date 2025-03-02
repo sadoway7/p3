@@ -16,10 +16,26 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    proxy: {
+      // Proxy all /api requests to the backend
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   preview: {
     host: '0.0.0.0',
     port: 3000,
-    allowedHosts: ['l2.sadoway.ca', 'rumfor.com']
+    allowedHosts: ['l2.sadoway.ca', 'rumfor.com'],
+    proxy: {
+      // Also set up proxy for preview mode
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
 })

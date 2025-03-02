@@ -5,14 +5,17 @@ services:
     build: .
     container_name: rumfor-app
     ports:
-      - "3000:3000" # Frontend
-      - "3001:3001" # Backend API
+      - "3000:3000" # Only expose the frontend port publicly
+      - "127.0.0.1:3001:3001" # Backend API only accessible locally or via proxy
     env_file:
       - .env.docker
     restart: unless-stopped
     environment:
       - HOST=0.0.0.0
       - PORT=3000
+      # New environment variables for better network handling
+      - BACKEND_URL=http://localhost:3001
+      - FRONTEND_URL=http://localhost:3000
     networks:
       - app_network
     labels:
@@ -22,11 +25,20 @@ services:
       - "traefik.http.routers.rumfor-app-frontend.entrypoints=websecure"
       - "traefik.http.routers.rumfor-app-frontend.tls=true"
       - "traefik.http.services.rumfor-app-frontend.loadbalancer.server.port=3000"
+      # Single entry point with proxying of API requests
+      - "traefik.http.middlewares.rumfor-app-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.rumfor-app-stripprefix.stripprefix.forceSlash=false"
       - "traefik.http.routers.rumfor-app-api.rule=(Host(`l2.sadoway.ca`) || Host(`rumfor.com`)) && PathPrefix(`/api`)"
       - "traefik.http.routers.rumfor-app-api.entrypoints=websecure"
       - "traefik.http.routers.rumfor-app-api.tls=true"
       - "traefik.http.services.rumfor-app-api.loadbalancer.server.port=3001"
 
+# Define the network for better isolation and communication
 networks:
   app_network:
     driver: bridge
+    # Set internal configuration for better performance
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16

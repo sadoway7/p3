@@ -106,6 +106,25 @@ This means you can update your app by either:
 - Restarting the container: `docker restart rumfor-app`
 - Or pushing changes to GitHub and waiting for the next restart
 
+### Frontend-Backend Communication
+
+We've implemented a robust solution to ensure the frontend and backend can communicate properly in all environments:
+
+1. **Relative API URLs**: 
+   - The frontend now uses relative URLs for all API calls
+   - API requests use paths like `/api/...` instead of absolute URLs with localhost
+   - This works regardless of what domain the site is accessed from
+
+2. **Vite Proxy Configuration**: 
+   - The development and preview servers have proxy configurations
+   - All `/api` requests from the frontend are automatically forwarded to the backend
+   - This ensures seamless development and production experience
+
+3. **Docker Network Settings**:
+   - The container is configured to ensure proper internal networking
+   - Backend binds to all interfaces (0.0.0.0) for container-internal communication
+   - The proxy middleware handles routing between frontend and backend
+
 ### Domain Configuration
 The application has been configured to support the following domains:
 - l2.sadoway.ca

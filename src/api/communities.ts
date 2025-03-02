@@ -1,11 +1,11 @@
-import { getApiBaseUrl } from './apiUtils';
+import { getApiBaseUrl, getApiPath } from './apiUtils';
 
 const API_BASE_URL = getApiBaseUrl();
 
 export async function getCommunities(searchTerm?: string) {
-  const url = searchTerm 
-    ? `${API_BASE_URL}/api/communities?search=${encodeURIComponent(searchTerm)}`
-    : `${API_BASE_URL}/api/communities`;
+  const url = searchTerm
+    ? getApiPath(`/api/communities?search=${encodeURIComponent(searchTerm)}`)
+    : getApiPath('/api/communities');
     
   const response = await fetch(url);
   if (!response.ok) {
@@ -15,7 +15,7 @@ export async function getCommunities(searchTerm?: string) {
 }
 
 export async function getCommunity(communityId: string) {
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}`);
+  const response = await fetch(getApiPath(`/api/communities/${communityId}`));
   if (!response.ok) {
     if (response.status === 404) {
       return null;
@@ -42,7 +42,7 @@ export async function createCommunity(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities`, {
+  const response = await fetch(getApiPath('/api/communities'), {
     method: 'POST',
     headers,
     body: JSON.stringify(communityData)
@@ -72,7 +72,7 @@ export async function updateCommunity(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}`), {
     method: 'PUT',
     headers,
     body: JSON.stringify(communityData)
@@ -95,7 +95,7 @@ export async function deleteCommunity(communityId: string, token?: string | null
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}`), {
     method: 'DELETE',
     headers
   });
