@@ -10,7 +10,7 @@
     - Notes: Updated CORS settings to allow requests from https://rumfor.com.
 - [x] **Docker Configuration**: Verify both ports are exposed in the container and the backend is binding to 0.0.0.0. (✅ Complete)
     - Date Completed: 2025-03-02
-    - Notes: Verified that Dockerfile exposes ports 3000 and 3001, and backend binds to 0.0.0.0.
+    - Notes: Updated Dockerfile to simplify startup process.
 - [x] **Environment Variables**: Add `VITE_API_BASE_URL=''` to your frontend environment and remove any hardcoded backend URLs. (✅ Complete)
     - Date Completed: 2025-03-02
     - Notes: Set VITE_API_BASE_URL to empty string in .env.docker.
