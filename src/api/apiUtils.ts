@@ -1,8 +1,11 @@
 // Use relative URLs for API calls to solve deployment issues
 export function getApiBaseUrl() {
-  // Use VITE_API_BASE_URL environment variable if available, otherwise default to relative URLs
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  return apiUrl || ''; // Use VITE_API_BASE_URL or relative URLs if not set
+  // Dynamically connect to backend using the window's hostname
+  // This works both locally and when deployed
+  if (typeof window !== 'undefined') {
+    return `http://${window.location.hostname}:3001`;
+  }
+  return 'http://localhost:3001'; // Fallback for SSR or non-browser environments
 }
 
 // Function to build API paths

@@ -16,8 +16,7 @@ services:
       # New environment variables for better network handling
       - BACKEND_URL=http://localhost:3001
       - FRONTEND_URL=http://localhost:3000
-    networks:
-      - app_network
+    network_mode: "host"
     labels:
       # These labels help if you're using automated reverse proxy like Traefik
       - "traefik.enable=true"
