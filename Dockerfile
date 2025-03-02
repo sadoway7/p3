@@ -4,13 +4,21 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package.docker.json ./package.json
+# Copy fix script and package files
+COPY fix-package-json.js ./
+COPY package*.json ./
 COPY backend/package*.json ./backend/
 
-# Install dependencies
-RUN npm install
-RUN cd backend && npm install
+# Run the fix script to remove platform-specific dependencies
+RUN node fix-package-json.js
+
+# Environment variables for npm
+ENV NPM_CONFIG_PLATFORM=linux
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Install dependencies after fixing package.json
+RUN npm install --omit=optional
+RUN cd backend && npm install --omit=optional
 
 # Copy application files
 COPY . .

@@ -6,20 +6,20 @@ This guide explains how to deploy the application to a Docker container on Unrai
 
 The application was originally developed on Windows, but Docker runs on Linux. To address platform compatibility issues:
 
-1. We've created a special `package.docker.json` file that excludes Windows-specific dependencies
-2. The Dockerfile uses this version instead of the regular package.json
+1. We've created a script (`fix-package-json.js`) that automatically removes Windows-specific dependencies
+2. The Dockerfile runs this script during the build process
 3. This prevents errors with packages like `@rollup/rollup-win32-x64-msvc` that are Windows-only
 
-### Maintaining package.docker.json
+### How it works
 
-When you add new dependencies to the project:
+The solution works as follows:
 
-1. Update the regular package.json as usual (npm install, etc.)
-2. Run the sync script to update package.docker.json:
-   ```bash
-   node sync-package-files.js
-   ```
-3. This script will automatically create an updated package.docker.json without Windows-specific dependencies
+1. During Docker build, the `fix-package-json.js` script:
+   - Automatically detects and removes Windows-specific packages
+   - Removes any `file:` dependencies that won't work in Docker
+   - Creates backups of the original package.json files
+   
+2. This approach requires no manual maintenance when you add new dependencies
 
 ## Prerequisites
 

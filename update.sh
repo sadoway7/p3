@@ -4,12 +4,13 @@
 # Pull latest changes
 git pull
 
-# Note: This script assumes package.docker.json exists and is maintained
-# If you've added new dependencies, make sure to update package.docker.json
-# to avoid platform compatibility issues (Windows vs Linux)
+# Note: We use fix-package-json.js during Docker build to automatically
+# handle platform compatibility issues between Windows and Linux
 
-# Rebuild Docker image
-docker build -t rumfor-app:latest .
+# Rebuild Docker image with additional arguments to help with compatibility
+docker build -t rumfor-app:latest \
+  --build-arg NPM_CONFIG_PLATFORM=linux \
+  --build-arg NODE_ENV=production .
 
 # Stop and remove old container
 docker stop rumfor-app || true
