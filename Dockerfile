@@ -30,11 +30,17 @@ ENV NODE_ENV=production
 EXPOSE 3000
 EXPOSE 3001
 
-# Create startup script
+# Create startup script - pulls latest from GitHub before starting
 RUN echo '#!/bin/sh \n \
   cd /app \n \
+  echo "Pulling latest code from GitHub..." \n \
+  git pull \n \
+  echo "Rebuilding if needed..." \n \
+  npm install \n \
+  npm run build \n \
+  cd backend && npm install && npm run build \n \
   echo "Starting backend server..." \n \
-  cd backend && npm start & \n \
+  npm start & \n \
   cd /app \n \
   echo "Starting frontend server..." \n \
   npx vite preview --host 0.0.0.0 --port 3000 \n' > /app/start.sh && chmod +x /app/start.sh

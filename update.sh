@@ -16,7 +16,10 @@ docker build --no-cache -t rumfor-app:latest .
 docker stop rumfor-app || true
 docker rm rumfor-app || true
 
-# Run new container with environment variables
+# Get current directory to mount git repository
+REPO_DIR=$(pwd)
+
+# Run new container with environment variables and git repo mounted
 docker run -d --name rumfor-app -p 3000:3000 -p 3001:3001 \
   -e API_KEY=${API_KEY} \
   -e DB_HOST=${DB_HOST} \
@@ -26,6 +29,9 @@ docker run -d --name rumfor-app -p 3000:3000 -p 3001:3001 \
   -e DB_NAME=${DB_NAME} \
   -e JWT_SECRET=${JWT_SECRET} \
   -e VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api} \
+  -e GIT_REPO_URL=$(git config --get remote.origin.url) \
+  -v ${REPO_DIR}/.git:/app/.git \
   rumfor-app:latest
 
 echo "Application updated successfully!"
+echo "The container will automatically pull the latest code from GitHub on startup."

@@ -92,6 +92,20 @@ The solution works through direct modification:
 - Frontend: http://unraid-ip:3000
 - Backend API: http://unraid-ip:3001
 
+### Auto-update on Startup
+
+The container has been configured to automatically pull the latest code from GitHub when it starts:
+
+1. The GitHub repository is mounted into the container
+2. On startup, the container will:
+   - Pull the latest code from GitHub
+   - Rebuild if necessary
+   - Start both the frontend and backend
+
+This means you can update your app by either:
+- Restarting the container: `docker restart rumfor-app`
+- Or pushing changes to GitHub and waiting for the next restart
+
 ### Domain Configuration
 The application has been configured to support the following domains:
 - l2.sadoway.ca
