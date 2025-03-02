@@ -6,7 +6,7 @@ services:
     container_name: rumfor-app
     ports:
       - "3000:3000" # Only expose the frontend port publicly
-      - "127.0.0.1:3001:3001" # Backend API only accessible locally or via proxy
+      - "3001:3001" # Backend API only accessible locally or via proxy
     env_file:
       - .env.docker
     restart: unless-stopped
@@ -14,9 +14,9 @@ services:
       - HOST=0.0.0.0
       - PORT=3000
       # New environment variables for better network handling
-      - BACKEND_URL=http://localhost:3001
+      - BACKEND_URL=/api
       - FRONTEND_URL=http://localhost:3000
-    network_mode: "host"
+    
     labels:
       # These labels help if you're using automated reverse proxy like Traefik
       - "traefik.enable=true"
