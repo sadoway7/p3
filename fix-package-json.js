@@ -11,7 +11,6 @@ const packageLockJsonPath = path.resolve(__dirname, 'package-lock.json');
 try {
   // 1. Read package.json
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  console.log('Original package.json:', packageJson);
 
   // 2. Remove optional dependencies that are Windows-specific
   if (packageJson.optionalDependencies) {
@@ -22,8 +21,6 @@ try {
     if (packageJson.dependencies) {
         delete packageJson.dependencies['@esbuild/win32-x64'];
     }
-
-  console.log('Modified package.json:', packageJson);
     
   // 4. Write the updated package.json
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8');
@@ -31,6 +28,7 @@ try {
 
   // 5. Delete package-lock.json
   if (fs.existsSync(packageLockJsonPath)) {
+  
       fs.unlinkSync(packageLockJsonPath);
       console.log('package-lock.json deleted successfully.');
   } else {
