@@ -13,7 +13,6 @@
     "start": "concurrently \"npm run dev\" \"npm run backend:build && npm run backend:start\""
   },
   "dependencies": {
-    "@esbuild/win32-x64": "^0.25.0",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.0",
     "@types/react-router-dom": "^5.3.3",
