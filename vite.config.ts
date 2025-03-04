@@ -16,14 +16,17 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    // Enable CORS for the development server to allow requests from any origin.
+    // In production, CORS should be configured on the backend server.
+    cors: true,
     proxy: {
       // Proxy all /api requests to the backend
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false
-      }
-    }
+        secure: false,
+      },
+    },
   },
   preview: {
     host: '0.0.0.0',
