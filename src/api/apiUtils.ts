@@ -1,18 +1,13 @@
-// Use relative URLs for API calls to solve deployment issues
-export function getApiBaseUrl() {
-  // Dynamically connect to backend using the window's hostname
-  // This works both locally and when deployed
-  if (typeof window !== 'undefined') {
-    return `http://${window.location.hostname}:3001`;
-  }
-  return 'http://localhost:3001'; // Fallback for SSR or non-browser environments
-}
-
-// Function to build API paths
+// Function to build API paths, ensuring they are relative
 export function getApiPath(path: string) {
   // Ensure the path starts with /api
-  if (!path.startsWith('/api')) {
-    path = `/api${path}`;
+  let apiPath = path;
+  if (!apiPath.startsWith('/api')) {
+    apiPath = `/api${apiPath}`;
   }
-  return path;
+  
+  // Ensure no double slashes
+  apiPath = apiPath.replace(/\/\//g, '/');
+  
+  return apiPath;
 }
