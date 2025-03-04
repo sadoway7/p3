@@ -32,7 +32,7 @@ const CommunityModControls: React.FC<CommunityModControlsProps> = ({ communityId
       setPendingCount(pendingPosts.length);
       setPendingJoinCount(joinRequests.length);
     } catch (err) {
-      console.error('Error loading pending counts:', err);
+      // Silently handle error - we're already returning empty arrays on failure
     } finally {
       setLoading(false);
     }

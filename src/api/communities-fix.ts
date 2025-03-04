@@ -2,8 +2,6 @@
 import { getApiPath } from './apiUtils';
 import { getCommunity, getCommunityMembers } from './communities';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-
 // Define types
 interface CommunityMemberType {
   community_id: string;

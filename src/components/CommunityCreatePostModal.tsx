@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createPost } from '../api/posts-fix';
+import { createPost } from '../api/posts';
 import { getCommunity } from '../api/communities';
 import { useAuth } from '../context/AuthContext';
 
@@ -32,7 +32,7 @@ export default function CommunityCreatePostModal({ onClose, communityId, communi
             setCommunityName(community.name);
           }
         } catch (error) {
-          console.error('Failed to fetch community details:', error);
+          // Silently handle error - we'll just use the communityId
         }
       };
       
@@ -69,18 +69,15 @@ export default function CommunityCreatePostModal({ onClose, communityId, communi
     setError(null);
 
     try {
-      // Generate a UUID for the post
+      // Prepare post data - let the API handle ID generation
       const postData = {
-        id: crypto.randomUUID(),
         title: postTitle,
         content: postContent,
         communityId: communityId,
         profile_post: false
       };
 
-      console.log('Creating post with data:', postData);
       const newPost = await createPost(postData, token);
-      console.log('New post created:', newPost);
       
       if (onSuccess) {
         onSuccess(newPost.id);

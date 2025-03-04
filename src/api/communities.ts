@@ -124,7 +124,7 @@ export async function getCommunityRules(communityId: string, token?: string | nu
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules`), {
+  const response = await fetch(getApiPath(`/communities/${communityId}/rules`), {
     headers
   });
   
@@ -151,7 +151,7 @@ export async function addCommunityRule(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules`), {
+  const response = await fetch(getApiPath(`/communities/${communityId}/rules`), {
     method: 'POST',
     headers,
     body: JSON.stringify(ruleData)
@@ -181,7 +181,7 @@ export async function updateCommunityRule(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules/${ruleId}`), {
+  const response = await fetch(getApiPath(`/communities/${communityId}/rules/${ruleId}`), {
     method: 'PUT',
     headers,
     body: JSON.stringify(ruleData)
@@ -208,7 +208,7 @@ export async function deleteCommunityRule(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules/${ruleId}`), {
+  const response = await fetch(getApiPath(`/communities/${communityId}/rules/${ruleId}`), {
     method: 'DELETE',
     headers
   });
@@ -231,7 +231,7 @@ export async function getCommunitySettings(communityId: string, token?: string |
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/communities/${communityId}/settings`), {
+  const response = await fetch(getApiPath(`/communities/${communityId}/settings`), {
     headers
   });
   

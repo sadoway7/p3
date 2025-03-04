@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiPath } from './apiUtils';
 
 // Types
 export interface ModeratorPermission {
@@ -66,7 +66,7 @@ export async function isUserModerator(communityId: string, token?: string | null
   
   try {
     // Get the current user info
-    const userResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    const userResponse = await fetch(getApiPath('/api/auth/me'), {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -76,7 +76,7 @@ export async function isUserModerator(communityId: string, token?: string | null
     const userId = userData.id;
     
     // Check if the user is a moderator of the community
-    const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
+    const response = await fetch(getApiPath(`/api/communities/${communityId}/members/${userId}`), {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -97,7 +97,7 @@ export async function getCommunitySettings(communityId: string, token?: string |
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/settings`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/settings`), {
     headers
   });
   
@@ -121,7 +121,7 @@ export async function updateCommunitySettings(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/settings`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/settings`), {
     method: 'PUT',
     headers,
     body: JSON.stringify(settings)
@@ -149,7 +149,7 @@ export async function getModeratorPermissions(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/moderator-permissions/${userId}`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/moderator-permissions/${userId}`), {
     headers
   });
   
@@ -174,7 +174,7 @@ export async function setModeratorPermissions(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/moderator-permissions/${userId}`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/moderator-permissions/${userId}`), {
     method: 'POST',
     headers,
     body: JSON.stringify(permissions)
@@ -194,7 +194,7 @@ export async function getPendingModQueue(communityId: string, token?: string | n
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/mod-queue`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/mod-queue`), {
     headers
   });
   
@@ -219,7 +219,7 @@ export async function moderatePost(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/posts/${postId}/moderate`, {
+  const response = await fetch(getApiPath(`/api/moderation/posts/${postId}/moderate`), {
     method: 'POST',
     headers,
     body: JSON.stringify({ action, reason })
@@ -245,7 +245,7 @@ export async function getModerationLogs(
   }
   
   const response = await fetch(
-    `${API_BASE_URL}/api/moderation/communities/${communityId}/logs?limit=${limit}&offset=${offset}`,
+    getApiPath(`/api/moderation/communities/${communityId}/logs?limit=${limit}&offset=${offset}`),
     { headers }
   );
   
@@ -263,7 +263,7 @@ export async function getBannedUsers(communityId: string, token?: string | null)
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/banned-users`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/banned-users`), {
     headers
   });
   
@@ -289,7 +289,7 @@ export async function banUser(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/ban/${userId}`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/ban/${userId}`), {
     method: 'POST',
     headers,
     body: JSON.stringify({ reason, duration })
@@ -316,7 +316,7 @@ export async function unbanUser(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/unban/${userId}`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/unban/${userId}`), {
     method: 'POST',
     headers,
     body: JSON.stringify({ reason })
@@ -342,7 +342,7 @@ export async function updateMemberRole(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/moderation/communities/${communityId}/members/${userId}`, {
+  const response = await fetch(getApiPath(`/api/moderation/communities/${communityId}/members/${userId}`), {
     method: 'PUT',
     headers,
     body: JSON.stringify({ role })

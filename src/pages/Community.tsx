@@ -23,18 +23,16 @@ export default function Community() {
         try {
           // Admin users have access to all communities
           if (user.role === 'admin') {
-            console.log("User is admin, setting isMember to true");
+            // Admin users always have access
             setIsMember(true);
             return;
           }
           if (user?.id) {
-            console.log(`Checking membership for user ${user?.id} in community ${id}, token: ${token}`);
             const memberInfo = await getCommunityMember(id, token, user.id);
-            console.log("Membership check result:", memberInfo);
             setIsMember(!!memberInfo); // Convert to boolean
           }
         } catch (error) {
-          console.error("Error checking community membership:", error);
+          // If there's an error checking membership, assume not a member
           setIsMember(false);
         }
       };

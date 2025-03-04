@@ -63,7 +63,7 @@ export default function Communities() {
       const posts = await getPosts(communityId, token);
       setCommunityPosts(prev => ({ ...prev, [communityId]: posts }));
     } catch (error) {
-      console.error(`Error fetching posts for community ${communityId}:`, error);
+      // Error already handled by setting postErrors state
       setPostErrors(prev => ({
         ...prev,
         [communityId]: error instanceof Error ? error.message : 'Failed to load posts'
@@ -200,8 +200,7 @@ export default function Communities() {
       
       setCommunities(processedData);
     } catch (err) {
-      console.error('Failed to fetch communities:', err);
-      setError('Failed to load communities');
+      setError(typeof err === 'string' ? err : 'Failed to load communities. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -219,7 +218,7 @@ export default function Communities() {
       const userCommunitiesData = await getUserCommunities(user.id);
       setUserCommunities(userCommunitiesData);
     } catch (error) {
-      console.error('Failed to fetch user communities:', error);
+      // Silently handle error - we'll just show empty user communities
     } finally {
       setLoadingUserCommunities(false);
     }
@@ -385,7 +384,7 @@ export default function Communities() {
                 <h3 className="font-bold text-sm uppercase">Your Communities</h3>
                 <button 
                   className="text-xs font-medium text-teal-600 hover:text-teal-800"
-                  onClick={() => alert('This will show all your communities')}
+                  onClick={() => navigate('/communities/user')}
                 >
                   See All
                 </button>

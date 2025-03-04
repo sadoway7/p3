@@ -28,6 +28,24 @@ interface Post {
   comments?: number;
 }
 
+interface UserData {
+  id: string;
+  username: string;
+  email?: string;
+  bio?: string;
+  role: string;
+  created_at: string;
+  avatar_url?: string;
+  post_count?: number;
+  comment_count?: number;
+  upvotes_received?: number;
+  downvotes_received?: number;
+  upvotes_given?: number;
+  downvotes_given?: number;
+  communities_joined?: number;
+  last_active?: string;
+}
+
 export default function Profile({ isUser }: ProfileProps) {
   const { username } = useParams()
   const { user, token } = useAuth()
@@ -36,7 +54,7 @@ export default function Profile({ isUser }: ProfileProps) {
   const [communityPosts, setCommunityPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [userData, setUserData] = useState<any>(user)
+  const [userData, setUserData] = useState<UserData | null>(user)
   const [showEditModal, setShowEditModal] = useState(false)
   
   // Fetch posts when component mounts
@@ -61,12 +79,8 @@ export default function Profile({ isUser }: ProfileProps) {
         else if (username) {
           // Fetch user data by username
           try {
-            // First, get all users
-            const response = await fetch(getApiPath('/users'))
-            const users = await response.json()
-            
-            // Find the user with the matching username
-            const matchedUser = users.find((user: any) => user.username === username)
+            // Get user by username
+            const matchedUser = await getUserByUsername(username)
             
             if (!matchedUser) {
               throw new Error('User not found')
@@ -80,13 +94,11 @@ export default function Profile({ isUser }: ProfileProps) {
             const userPosts = posts.filter((post: Post) => post.userId === matchedUser.id)
             setProfilePosts(userPosts)
           } catch (err) {
-            console.error('Failed to fetch user data:', err)
             setError('User not found')
           }
         }
       } catch (err) {
-        console.error('Failed to fetch posts:', err)
-        setError('Failed to load posts')
+        setError(typeof err === 'string' ? err : 'Failed to load posts')
       } finally {
         setLoading(false)
       }
