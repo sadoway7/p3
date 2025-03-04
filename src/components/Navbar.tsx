@@ -12,7 +12,7 @@ export default function Navbar() {
   };
 
   return (
-      <nav className="bg-black text-white font-mono relative z-10 mb-0">                         │ │
+      <nav className="bg-black text-white font-mono relative z-[1000] mb-0">                         │ │
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">   
         <div className="flex items-center space-x-8">
           <Link 
@@ -65,7 +65,7 @@ export default function Navbar() {
               </button>
               
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-gray-800 shadow-lg py-2 z-[500]">
+                <div className="absolute right-0 mt-2 w-56 bg-gray-800 shadow-lg py-2 z-[2000]">
                   <Link
                     to="/profile"
                     className="block px-4 py-3 text-sm text-white hover:bg-gray-700 uppercase"
