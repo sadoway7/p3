@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { checkNotBanned } = require('../middleware/moderation');
-const comments = require('../api/comments.js.new');
+const comments = require('../api/comments');
 
 // Middleware to ensure routes are protected
 router.use(authenticateToken);

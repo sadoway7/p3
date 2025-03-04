@@ -96,27 +96,6 @@ const createComment = async (userId, commentData) => {
       
       await conn.query(query, values);
       
-      // Log activity
-      const activityTypeId = await getActivityTypeId(conn, 'COMMENT');
-      const actionId = await getActionId(conn, 'CREATE');
-      
-      await conn.query(
-        `INSERT INTO activity (id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          uuidv4(),
-          userId,
-          activityTypeId,
-          actionId,
-          id,
-          'comment',
-          JSON.stringify({
-            post_id: post_id,
-            parent_comment_id: parent_comment_id || null
-          })
-        ]
-      );
-      
       // Get the created comment with username
       const [newComment] = await conn.query(`
         SELECT c.*, u.username
@@ -171,27 +150,6 @@ const updateComment = async (commentId, userId, content) => {
       await conn.query(
         "UPDATE comment SET content = ? WHERE id = ?",
         [content, commentId]
-      );
-      
-      // Log activity
-      const activityTypeId = await getActivityTypeId(conn, 'COMMENT');
-      const actionId = await getActionId(conn, 'UPDATE');
-      
-      await conn.query(
-        `INSERT INTO activity (id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          uuidv4(),
-          userId,
-          activityTypeId,
-          actionId,
-          commentId,
-          'comment',
-          JSON.stringify({
-            post_id: comment.post_id,
-            parent_comment_id: comment.parent_comment_id || null
-          })
-        ]
       );
       
       // Get the updated comment with username
@@ -280,56 +238,8 @@ const deleteComment = async (commentId, userId) => {
       
       const replyIds = await findReplies(commentId);
       
-      // Log activity for the main comment
-      const activityTypeId = await getActivityTypeId(conn, 'COMMENT');
-      const actionId = await getActionId(conn, 'DELETE');
-      
-      await conn.query(
-        `INSERT INTO activity (id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          uuidv4(),
-          userId,
-          activityTypeId,
-          actionId,
-          commentId,
-          'comment',
-          JSON.stringify({
-            post_id: comment.post_id,
-            parent_comment_id: comment.parent_comment_id || null
-          })
-        ]
-      );
-      
       // Delete all replies
       if (replyIds.length > 0) {
-        // Log activity for each reply
-        for (const replyId of replyIds) {
-          const [reply] = await conn.query(
-            "SELECT * FROM comment WHERE id = ?",
-            [replyId]
-          );
-          
-          if (reply) {
-            await conn.query(
-              `INSERT INTO activity (id, user_id, activity_type_id, action_id, entity_id, entity_type, metadata)
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [
-                uuidv4(),
-                userId,
-                activityTypeId,
-                actionId,
-                replyId,
-                'comment',
-                JSON.stringify({
-                  post_id: reply.post_id,
-                  parent_comment_id: reply.parent_comment_id || null
-                })
-              ]
-            );
-          }
-        }
-        
         const placeholders = replyIds.map(() => '?').join(',');
         await conn.query(
           `DELETE FROM comment WHERE id IN (${placeholders})`,
@@ -459,26 +369,6 @@ const getUserComments = async (userId) => {
     if (conn) conn.release();
   }
 };
-
-// Helper function to get activity type ID
-async function getActivityTypeId(conn, typeName) {
-  const [activityType] = await conn.query(
-    "SELECT id FROM activity_type WHERE name = ?",
-    [typeName]
-  );
-  
-  return activityType ? activityType.id : null;
-}
-
-// Helper function to get action ID
-async function getActionId(conn, actionName) {
-  const [action] = await conn.query(
-    "SELECT id FROM action WHERE name = ?",
-    [actionName]
-  );
-  
-  return action ? action.id : null;
-}
 
 module.exports = {
   getPostComments,
