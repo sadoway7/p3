@@ -21,7 +21,7 @@ export interface CommentInput {
 // Get all comments for a post
 export async function getPostComments(postId: string, threaded: boolean = false) {
   try {
-    const url = `${getApiPath(`/api/posts/${postId}/comments`)}${threaded ? '?threaded=true' : ''}`;
+    const url = `${getApiPath(`/posts/${postId}/comments`)}${threaded ? '?threaded=true' : ''}`;
     console.log(`Fetching comments from: ${url}`);
     
     const response = await fetch(url);
@@ -44,7 +44,7 @@ export async function getPostComments(postId: string, threaded: boolean = false)
 
 // Get a specific comment
 export async function getComment(commentId: string) {
-  const response = await fetch(getApiPath(`/api/comments/${commentId}`));
+  const response = await fetch(getApiPath(`/comments/${commentId}`));
   
   if (!response.ok) {
     if (response.status === 404) {
@@ -87,11 +87,11 @@ export async function createComment(
       post_id: postId
     };
     
-    console.log(`Sending comment request to ${getApiPath(`/api/posts/${postId}/comments`)}`);
+    console.log(`Sending comment request to ${getApiPath(`/posts/${postId}/comments`)}`);
     console.log('Request payload:', data);
     console.log('Headers:', headers);
     
-    const response = await fetch(getApiPath(`/api/posts/${postId}/comments`), {
+    const response = await fetch(getApiPath(`/posts/${postId}/comments`), {
       method: 'POST',
       headers,
       body: JSON.stringify(data)
@@ -135,7 +135,7 @@ export async function updateComment(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/comments/${commentId}`), {
+  const response = await fetch(getApiPath(`/comments/${commentId}`), {
     method: 'PUT',
     headers,
     body: JSON.stringify({ content })
@@ -160,7 +160,7 @@ export async function deleteComment(commentId: string, token?: string | null) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/comments/${commentId}`), {
+  const response = await fetch(getApiPath(`/comments/${commentId}`), {
     method: 'DELETE',
     headers
   });
@@ -178,7 +178,7 @@ export async function deleteComment(commentId: string, token?: string | null) {
 
 // Get replies to a comment
 export async function getCommentReplies(commentId: string) {
-  const response = await fetch(getApiPath(`/api/comments/${commentId}/replies`));
+  const response = await fetch(getApiPath(`/comments/${commentId}/replies`));
   
   if (!response.ok) {
     throw new Error('Failed to fetch comment replies');
@@ -190,7 +190,7 @@ export async function getCommentReplies(commentId: string) {
 // Get comment count for a post
 export async function getCommentCount(postId: string): Promise<number> {
   try {
-    const response = await fetch(getApiPath(`/api/posts/${postId}/comments/count`));
+    const response = await fetch(getApiPath(`/posts/${postId}/comments/count`));
     
     if (!response.ok) {
       console.warn(`Error fetching comment count for post ${postId}: ${response.status}`);

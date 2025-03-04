@@ -12,7 +12,7 @@ export async function getPosts(communityId?: string | null, token?: string | nul
   }
 
   // Build the URL with query parameters if communityId is provided
-  let url = getApiPath('/api/posts');
+  let url = getApiPath('/posts');
   const queryParams = new URLSearchParams(params);
   if (communityId) {
     queryParams.append('communityId', communityId);
@@ -91,7 +91,7 @@ export async function createPost(
     };
 
     // Try direct posts endpoint first
-    const response = await fetch(getApiPath('/api/posts'), {
+    const response = await fetch(getApiPath('/posts'), {
       method: 'POST',
       headers,
       body: JSON.stringify(postWithId)

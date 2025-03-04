@@ -8,7 +8,7 @@ export async function getPosts(communityId?: string | null, token?: string | nul
   }
   
   // Build the URL with query parameters if communityId is provided
-  let url = getApiPath('/api/posts');
+  let url = getApiPath('/posts');
   if (communityId) {
     url += `?communityId=${encodeURIComponent(communityId)}`;
   }
@@ -31,7 +31,7 @@ export async function getPost(postId: string, token?: string | null) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/posts/${postId}`), {
+  const response = await fetch(getApiPath(`/posts/${postId}`), {
     headers
   });
   
@@ -69,7 +69,7 @@ export async function createPost(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath('/api/posts'), {
+  const response = await fetch(getApiPath('/posts'), {
     method: 'POST',
     headers,
     body: JSON.stringify(postWithId)
@@ -98,7 +98,7 @@ export async function updatePost(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/posts/${postId}`), {
+  const response = await fetch(getApiPath(`/posts/${postId}`), {
     method: 'PUT',
     headers,
     body: JSON.stringify(postData)
@@ -121,7 +121,7 @@ export async function deletePost(postId: string, token?: string | null) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/posts/${postId}`), {
+  const response = await fetch(getApiPath(`/posts/${postId}`), {
     method: 'DELETE',
     headers
   });

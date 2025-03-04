@@ -14,7 +14,7 @@ export async function voteOnPost(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/votes/posts/${postId}`), {
+  const response = await fetch(getApiPath(`/votes/posts/${postId}`), {
     method: 'POST',
     headers,
     body: JSON.stringify({ value })
@@ -42,7 +42,7 @@ export async function voteOnComment(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/votes/comments/${commentId}`), {
+  const response = await fetch(getApiPath(`/votes/comments/${commentId}`), {
     method: 'POST',
     headers,
     body: JSON.stringify({ value })
@@ -67,7 +67,7 @@ export async function getUserPostVote(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/votes/posts/${postId}/user`), {
+  const response = await fetch(getApiPath(`/votes/posts/${postId}/user`), {
     headers
   });
   
@@ -94,7 +94,7 @@ export async function getUserCommentVote(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath(`/api/votes/comments/${commentId}/user`), {
+  const response = await fetch(getApiPath(`/votes/comments/${commentId}/user`), {
     headers
   });
   

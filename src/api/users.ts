@@ -24,7 +24,7 @@ export async function getCurrentUser(token?: string | null): Promise<User> {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath('/api/auth/me'), {
+  const response = await fetch(getApiPath('/auth/me'), {
     headers
   });
   
@@ -37,7 +37,7 @@ export async function getCurrentUser(token?: string | null): Promise<User> {
 }
 
 export async function getUserById(userId: string): Promise<User> {
-  const response = await fetch(getApiPath(`/api/users/${userId}`));
+  const response = await fetch(getApiPath(`/users/${userId}`));
   
   if (!response.ok) {
     if (response.status === 404) {
@@ -52,7 +52,7 @@ export async function getUserById(userId: string): Promise<User> {
 
 export async function getUserByUsername(username: string): Promise<User> {
   // First, lookup the user ID by username
-  const lookupResponse = await fetch(getApiPath(`/api/users/lookup/${username}`));
+  const lookupResponse = await fetch(getApiPath(`/users/lookup/${username}`));
   
   if (!lookupResponse.ok) {
     if (lookupResponse.status === 404) {
@@ -69,7 +69,7 @@ export async function getUserByUsername(username: string): Promise<User> {
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  const response = await fetch(getApiPath('/api/users'));
+  const response = await fetch(getApiPath('/users'));
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -96,7 +96,7 @@ export async function updateUserProfile(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(getApiPath('/api/users/profile'), {
+  const response = await fetch(getApiPath('/users/profile'), {
     method: 'PUT',
     headers,
     body: JSON.stringify(userData)
