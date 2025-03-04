@@ -26,3 +26,4 @@ dist-ssr
 *.sw?
 ARCHIVED
 .git_disabled
+package-lock.json
