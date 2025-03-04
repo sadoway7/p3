@@ -1,3 +1,5 @@
+import { getApiPath } from '../api/apiUtils'
+
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import UserInfo from '../components/UserInfo'
@@ -60,7 +62,7 @@ export default function Profile({ isUser }: ProfileProps) {
           // Fetch user data by username
           try {
             // First, get all users
-            const response = await fetch('http://localhost:3001/api/users')
+            const response = await fetch(getApiPath('/users'))
             const users = await response.json()
             
             // Find the user with the matching username

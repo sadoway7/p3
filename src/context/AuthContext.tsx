@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getApiPath } from '../api/apiUtils';
 
 // Define the User type
 interface User {
@@ -42,9 +43,6 @@ export const AuthContext = createContext<AuthContextType>({
   error: null
 });
 
-// API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-
 // AuthProvider component
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -65,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        const response = await fetch(getApiPath('/api/auth/me'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -95,7 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(getApiPath('/api/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -130,7 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch(getApiPath('/api/auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

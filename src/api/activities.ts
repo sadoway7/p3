@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiPath } from './apiUtils';
 
 export interface Activity {
   id: string;
@@ -51,7 +51,7 @@ export async function getActivityTypes(token?: string | null): Promise<ActivityT
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/activity/types`, {
+  const response = await fetch(getApiPath('/api/activity/types'), {
     headers
   });
   
@@ -71,7 +71,7 @@ export async function getActionTypes(token?: string | null): Promise<ActionType[
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/activity/actions`, {
+  const response = await fetch(getApiPath('/api/activity/actions'), {
     headers
   });
   
@@ -105,7 +105,7 @@ export async function getCurrentUserActivities(
   if (options.endDate) queryParams.append('endDate', options.endDate);
   
   const queryString = queryParams.toString();
-  const url = `${API_BASE_URL}/api/activity/me${queryString ? `?${queryString}` : ''}`;
+  const url = `${getApiPath('/api/activity/me')}${queryString ? `?${queryString}` : ''}`;
   
   const response = await fetch(url, {
     headers
@@ -142,7 +142,7 @@ export async function getUserActivities(
   if (options.endDate) queryParams.append('endDate', options.endDate);
   
   const queryString = queryParams.toString();
-  const url = `${API_BASE_URL}/api/activity/user/${userId}${queryString ? `?${queryString}` : ''}`;
+  const url = `${getApiPath(`/api/activity/user/${userId}`)}${queryString ? `?${queryString}` : ''}`;
   
   const response = await fetch(url, {
     headers
@@ -179,7 +179,7 @@ export async function getCommunityActivities(
   if (options.endDate) queryParams.append('endDate', options.endDate);
   
   const queryString = queryParams.toString();
-  const url = `${API_BASE_URL}/api/activity/community/${communityId}${queryString ? `?${queryString}` : ''}`;
+  const url = `${getApiPath(`/api/activity/community/${communityId}`)}${queryString ? `?${queryString}` : ''}`;
   
   const response = await fetch(url, {
     headers
@@ -211,7 +211,7 @@ export async function getPostActivities(
   if (options.offset) queryParams.append('offset', options.offset.toString());
   
   const queryString = queryParams.toString();
-  const url = `${API_BASE_URL}/api/activity/post/${postId}${queryString ? `?${queryString}` : ''}`;
+  const url = `${getApiPath(`/api/activity/post/${postId}`)}${queryString ? `?${queryString}` : ''}`;
   
   const response = await fetch(url, {
     headers
@@ -245,7 +245,7 @@ export async function logActivity(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/activity/log`, {
+  const response = await fetch(getApiPath('/api/activity/log'), {
     method: 'POST',
     headers,
     body: JSON.stringify(activityData)

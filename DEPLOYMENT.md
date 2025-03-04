@@ -16,7 +16,7 @@
     - Notes: Set VITE_API_BASE_URL to empty string in .env.docker.
 - [ ] **Nginx Configuration**: Keep your current configuration but add response headers to track if requests are hitting the proxy. (⏳ Pending)
     - Date Completed:
-    - Notes:
+    - Notes: Updated src/context/AuthContext.tsx to remove hardcoded API base URL.
 
 ## Testing and Verification
 

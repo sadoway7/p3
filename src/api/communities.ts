@@ -1,6 +1,4 @@
-import { getApiBaseUrl, getApiPath } from './apiUtils';
-
-const API_BASE_URL = getApiBaseUrl();
+import { getApiPath } from './apiUtils';
 
 export async function getCommunities(searchTerm?: string) {
   const url = searchTerm
@@ -111,7 +109,7 @@ export async function deleteCommunity(communityId: string, token?: string | null
 }
 
 export async function getUserCommunities(userId: string) {
-  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/communities`);
+  const response = await fetch(getApiPath(`/api/users/${userId}/communities`));
   if (!response.ok) {
     throw new Error('Failed to fetch user communities');
   }
@@ -126,7 +124,7 @@ export async function getCommunityRules(communityId: string, token?: string | nu
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/rules`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules`), {
     headers
   });
   
@@ -153,7 +151,7 @@ export async function addCommunityRule(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/rules`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules`), {
     method: 'POST',
     headers,
     body: JSON.stringify(ruleData)
@@ -183,7 +181,7 @@ export async function updateCommunityRule(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/rules/${ruleId}`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules/${ruleId}`), {
     method: 'PUT',
     headers,
     body: JSON.stringify(ruleData)
@@ -210,7 +208,7 @@ export async function deleteCommunityRule(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/rules/${ruleId}`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/rules/${ruleId}`), {
     method: 'DELETE',
     headers
   });
@@ -233,7 +231,7 @@ export async function getCommunitySettings(communityId: string, token?: string |
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/settings`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/settings`), {
     headers
   });
   
@@ -270,7 +268,7 @@ export async function updateCommunitySettings(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/settings`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/settings`), {
     method: 'PUT',
     headers,
     body: JSON.stringify(settingsData)
@@ -294,7 +292,7 @@ export async function getCommunityMembers(communityId: string, token?: string | 
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/members`), {
     headers
   });
   
@@ -314,7 +312,7 @@ export async function joinCommunity(communityId: string, token?: string | null) 
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/members`), {
     method: 'POST',
     headers
   });
@@ -340,7 +338,7 @@ export async function updateCommunityMemberRole(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/members/${userId}`), {
     method: 'PUT',
     headers,
     body: JSON.stringify({ role })
@@ -369,8 +367,8 @@ export async function leaveCommunity(communityId: string, userId?: string, token
   // If userId is provided, we're removing a specific user (as a moderator)
   // Otherwise we're removing the current user (self)
   const url = userId 
-    ? `${API_BASE_URL}/api/communities/${communityId}/members/${userId}`
-    : `${API_BASE_URL}/api/communities/${communityId}/members`;
+    ? getApiPath(`/api/communities/${communityId}/members/${userId}`)
+    : getApiPath(`/api/communities/${communityId}/members`);
   
   const response = await fetch(url, {
     method: 'DELETE',
@@ -395,7 +393,7 @@ export async function getPendingJoinRequests(communityId: string, token?: string
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/join-requests`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/join-requests`), {
     headers
   });
   
@@ -415,7 +413,7 @@ export async function approveJoinRequest(communityId: string, requestId: string,
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/join-requests/${requestId}/approve`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/join-requests/${requestId}/approve`), {
     method: 'POST',
     headers
   });
@@ -436,7 +434,7 @@ export async function rejectJoinRequest(communityId: string, requestId: string, 
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/join-requests/${requestId}/reject`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/join-requests/${requestId}/reject`), {
     method: 'POST',
     headers
   });
@@ -450,7 +448,7 @@ export async function rejectJoinRequest(communityId: string, requestId: string, 
 
 // Community About API
 export async function getCommunityAbout(communityId: string) {
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/about`);
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/about`));
   if (!response.ok) {
     if (response.status === 404) {
       return null;
@@ -484,7 +482,7 @@ export async function getCommunityMember(communityId: string, userId: string, to
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
+  const response = await fetch(getApiPath(`/api/communities/${communityId}/members/${userId}`), {
     headers
   });
   
