@@ -1,4 +1,5 @@
 // Fixed version of the communities API with correct endpoint paths
+import { getApiPath } from './apiUtils';
 import { getCommunity, getCommunityMembers } from './communities';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -32,7 +33,7 @@ export async function joinCommunity(communityId: string, token?: string | null) 
     console.log(`Joining community ${communityId}...`);
     
     // Use the communities API endpoint
-    const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members`, {
+    const response = await fetch(getApiPath(`/api/communities/${communityId}/members`), {
       method: 'POST',
       headers
     });
@@ -91,9 +92,9 @@ export async function leaveCommunity(communityId: string, userId?: string, token
     }
     
     if (userToRemove) {
-      const specificUserUrl = `${API_BASE_URL}/api/communities/${communityId}/members/${userToRemove}`;
+      const specificUserUrl = getApiPath(`/api/communities/${communityId}/members/${userToRemove}`);
       console.log(`Using user-specific endpoint: ${specificUserUrl}`);
-      
+
       const response = await fetch(specificUserUrl, {
         method: 'DELETE',
         headers
@@ -109,9 +110,9 @@ export async function leaveCommunity(communityId: string, userId?: string, token
     
     // If we get here, either we couldn't get a user ID or the specific endpoint failed
     // Try the generic endpoint as a fallback
-    const genericUrl = `${API_BASE_URL}/api/communities/${communityId}/members`;
+    const genericUrl = getApiPath(`/api/communities/${communityId}/members`);
     console.log(`Using generic endpoint: ${genericUrl}`);
-    
+
     const response = await fetch(genericUrl, {
       method: 'DELETE',
       headers
@@ -174,7 +175,7 @@ export async function getCommunityMember(communityId: string, token?: string | n
     console.log(`Checking membership status for user ${userId} in community ${communityId}...`);
     
     // Get all members of the community - this method is reliable and works
-    const response = await fetch(`${API_BASE_URL}/api/communities/${communityId}/members`, {
+    const response = await fetch(getApiPath(`/api/communities/${communityId}/members`), {
       method: 'GET',
       headers
     });
