@@ -19,25 +19,26 @@ export default function CommentSection({ postId }: CommentSectionProps) {
   const user = auth?.user
   const token = auth?.token
 
+  // Function to fetch comments
+  const fetchComments = async () => {
+    try {
+      setLoading(true)
+      console.log('Fetching comments for post:', postId)
+      const data = await getPostComments(postId, true) // Get threaded comments
+      console.log('Comments data:', data)
+      setComments(data || []) // Ensure we always have an array even if API returns null/undefined
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching comments:', err)
+      setError('Failed to load comments')
+      setComments([]) // Set empty array on error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Fetch comments when component mounts
   useEffect(() => {
-    const fetchComments = async () => {
-      try {
-        setLoading(true)
-        console.log('Fetching comments for post:', postId)
-        const data = await getPostComments(postId, true) // Get threaded comments
-        console.log('Comments data:', data)
-        setComments(data || []) // Ensure we always have an array even if API returns null/undefined
-        setError(null)
-      } catch (err) {
-        console.error('Error fetching comments:', err)
-        setError('Failed to load comments')
-        setComments([]) // Set empty array on error
-      } finally {
-        setLoading(false)
-      }
-    }
-
     if (postId) {
       fetchComments()
     } else {
@@ -73,19 +74,15 @@ export default function CommentSection({ postId }: CommentSectionProps) {
       
       console.log('Comment submission successful, response:', newComment)
       
-      // Add the new comment to the list
-      setComments(prevComments => [...prevComments, {
-        ...newComment,
-        username: user.username,
-        replies: []
-      }])
-      
       // Clear the input
       setCommentText('')
       
       // Show success message temporarily
       setError('Comment posted successfully!')
       setTimeout(() => setError(null), 3000)
+      
+      // Fetch comments again to ensure we have the latest data
+      fetchComments()
     } catch (err: any) {
       console.error('Error posting comment:', err)
       // Provide more detailed error message
@@ -113,41 +110,8 @@ export default function CommentSection({ postId }: CommentSectionProps) {
         token
       )
       
-      // Update the comments state to include the new reply
-      setComments(prevComments => {
-        // Create a deep copy of the comments array
-        const updatedComments = JSON.parse(JSON.stringify(prevComments))
-        
-        // Find the parent comment
-        const findAndAddReply = (comments: any[]) => {
-          for (let i = 0; i < comments.length; i++) {
-            if (comments[i].id === parentId) {
-              // Add the reply to this comment
-              if (!comments[i].replies) {
-                comments[i].replies = []
-              }
-              comments[i].replies.push({
-                ...newReply,
-                username: user.username,
-                replies: []
-              })
-              return true
-            }
-            
-            // Check in replies recursively
-            if (comments[i].replies && comments[i].replies.length > 0) {
-              if (findAndAddReply(comments[i].replies)) {
-                return true
-              }
-            }
-          }
-          return false
-        }
-        
-        findAndAddReply(updatedComments)
-        return updatedComments
-      })
-      
+      // Fetch comments again to ensure we have the latest data
+      fetchComments()
       return true
     } catch (err) {
       console.error('Error posting reply:', err)
@@ -230,26 +194,44 @@ export default function CommentSection({ postId }: CommentSectionProps) {
         </div>
       )}
       
-      {/* Comment form */}
-      <div className="mb-6 border-2 border-gray-100 rounded-md p-3 transition-all hover:border-teal-100">
-        <h3 className="text-sm font-medium mb-2">Comment as {user ? user.username : 'guest'}</h3>
+      {/* Comment form - Reddit-like UI with buttons inside */}
+      <div className="mb-6 border-2 border-gray-100 rounded-md transition-all hover:border-teal-100">
+        <h3 className="text-sm font-medium p-3 pb-1">Comment as {user ? user.username : 'guest'}</h3>
         <form onSubmit={handleSubmitComment}>
-          <textarea
-            className="w-full p-3 border border-gray-200 rounded focus:border-teal-400 focus:outline-none transition-colors"
-            rows={4}
-            placeholder={user ? "What are your thoughts?" : "Please sign in to comment"}
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            disabled={!user || submitting}
-          />
-          <div className="flex justify-end mt-2">
-            <button 
-              type="submit"
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:bg-gray-400 transition-colors"
-              disabled={!user || !commentText.trim() || submitting}
-            >
-              {submitting ? 'Posting...' : 'Comment'}
-            </button>
+          <div className="relative">
+            <textarea
+              className="w-full p-3 pt-2 border-t border-gray-200 focus:outline-none transition-colors min-h-[100px]"
+              placeholder={user ? "What are your thoughts?" : "Please sign in to comment"}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              disabled={!user || submitting}
+            />
+            
+            {/* Formatting toolbar */}
+            <div className="flex items-center px-3 py-2 bg-gray-50 border-t border-gray-200">
+              <div className="flex-grow flex gap-2">
+                <button type="button" className="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                  <span className="font-bold">B</span>
+                </button>
+                <button type="button" className="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                  <span className="italic">I</span>
+                </button>
+                <button type="button" className="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                  <span className="underline">U</span>
+                </button>
+                <button type="button" className="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                  Link
+                </button>
+              </div>
+              
+              <button
+                type="submit"
+                className="px-4 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:bg-gray-400 transition-colors text-sm font-medium"
+                disabled={!user || !commentText.trim() || submitting}
+              >
+                {submitting ? 'Posting...' : 'Comment'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

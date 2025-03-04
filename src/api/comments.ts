@@ -10,6 +10,7 @@ export interface Comment {
   updated_at: string;
   username?: string;
   replies?: Comment[];
+  votes?: number;
 }
 
 export interface CommentInput {
