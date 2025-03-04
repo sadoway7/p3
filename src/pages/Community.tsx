@@ -7,7 +7,7 @@ import CommunityAbout from '../components/CommunityAbout'
 import ActivityHistory from '../components/ActivityHistory'
 import CommunityCreatePostModal from '../components/CommunityCreatePostModal'
 import { useAuth } from '../context/AuthContext'
-import { getCommunityMember } from '../api/communities'
+import { getCommunityMember } from '../api/communities-fix'
 import ModeratorDebug from '../debug/ModeratorDebug'
 
 export default function Community() {
@@ -26,9 +26,10 @@ export default function Community() {
             setIsMember(true);
             return;
           }
-          
-          const memberInfo = await getCommunityMember(id, user.id, token);
-          setIsMember(!!memberInfo); // Convert to boolean
+          if (user?.id) {
+            const memberInfo = await getCommunityMember(id, token, user.id);
+            setIsMember(!!memberInfo); // Convert to boolean
+          }
         } catch (error) {
           console.error("Error checking community membership:", error);
           setIsMember(false);

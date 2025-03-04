@@ -155,62 +155,62 @@ export async function leaveCommunity(communityId: string, userId?: string, token
   }
 }
 // Membership status checking function - optimized to use only the method we know works
-export async function getCommunityMember(communityId: string, token?: string | null, userId?: string) {
-  if (!token) {
-    console.log("Missing token for membership check");
-    return null;
-  }
-  
-  if (!userId) {
-    console.log("Missing userId for membership check");
-    return null;
-  }
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-  
-  try {
-    console.log(`Checking membership status for user ${userId} in community ${communityId}...`);
-    
-    // Get all members of the community - this method is reliable and works
-    const response = await fetch(getApiPath(`/api/communities/${communityId}/members`), {
-      method: 'GET',
-      headers
-    });
-    
-    if (!response.ok) {
-      console.error(`Error getting community members: ${response.status}`);
-      return null;
+export async function getCommunityMember(communityId: string, token: string | null | undefined, userId?: string) {
+    if (!token) {
+        console.log("Missing token for membership check");
+        return null;
     }
-    
-    // Define a type for community member
-    interface CommunityMember {
-      community_id: string;
-      user_id: string;
-      role: string;
-      joined_at: string | Date;
+
+    if (!userId) {
+        console.log("Missing userId for membership check");
+        return null;
     }
-    
-    // Parse the response
-    const membersData = await response.json();
-    console.log(`Got ${membersData.length} community members`);
-    
-    // Find the current user in the members list
-    const currentMember = membersData.find((member: CommunityMember) => member.user_id === userId);
-    
-    if (currentMember) {
-      console.log(`User ${userId} is a member of community ${communityId}`);
-      return currentMember;
-    } else {
-      console.log(`User ${userId} is not a member of community ${communityId}`);
-      return null;
+
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+
+    try {
+        console.log(`Checking membership status for user ${userId} in community ${communityId}...`);
+
+        // Get all members of the community - this method is reliable and works
+        const response = await fetch(getApiPath(`/api/communities/${communityId}/members`), {
+            method: 'GET',
+            headers
+        });
+
+        if (!response.ok) {
+            console.error(`Error getting community members: ${response.status}`);
+            return null;
+        }
+
+        // Define a type for community member
+        interface CommunityMember {
+            community_id: string;
+            user_id: string;
+            role: string;
+            joined_at: string | Date;
+        }
+
+        // Parse the response
+        const membersData = await response.json();
+        console.log(`Got ${membersData.length} community members`);
+
+        // Find the current user in the members list
+        const currentMember = membersData.find((member: CommunityMember) => member.user_id === userId);
+
+        if (currentMember) {
+            console.log(`User ${userId} is a member of community ${communityId}`);
+            return currentMember;
+        } else {
+            console.log(`User ${userId} is not a member of community ${communityId}`);
+            return null;
+        }
+    } catch (error) {
+        console.error('Error getting community member status:', error);
+        return null;
     }
-  } catch (error) {
-    console.error('Error getting community member status:', error);
-    return null;
-  }
 }
 
 // Fallback implementation of getCommunityAbout that assembles data from other endpoints
