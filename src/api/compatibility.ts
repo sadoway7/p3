@@ -1,7 +1,6 @@
 // API Compatibility Layer
 // This file helps adapt between the frontend and backend API changes
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { getApiPath } from './apiUtils';
 
 // Handles error responses from the API
 export async function handleApiResponse(response: Response) {
@@ -62,30 +61,30 @@ export async function getCommunityActivities(communityId: string, limit = 10): P
 
 // Community rules - safely handles missing position column
 export async function getCommunityRules(communityId: string, token?: string | null): Promise<any[]> {
-  return safeGetArray(`${API_BASE_URL}/api/communities/${communityId}/rules`, token);
+  return safeGetArray(getApiPath(`/api/communities/${communityId}/rules`), token);
 }
 
 // Posts for a community - handles table name mismatch
 export async function getCommunityPosts(communityId: string, token?: string | null): Promise<any[]> {
-  return safeGetArray(`${API_BASE_URL}/api/posts?communityId=${communityId}`, token);
+  return safeGetArray(getApiPath(`/api/posts?communityId=${communityId}`), token);
 }
 
 // Community settings - robust error handling
 export async function getCommunitySettings(communityId: string, token?: string | null): Promise<any | null> {
-  return safeGetObject(`${API_BASE_URL}/api/communities/${communityId}/settings`, token);
+  return safeGetObject(getApiPath(`/api/communities/${communityId}/settings`), token);
 }
 
 // Get community members
 export async function getCommunityMembers(communityId: string, token?: string | null): Promise<any[]> {
-  return safeGetArray(`${API_BASE_URL}/api/communities/${communityId}/members`, token);
+  return safeGetArray(getApiPath(`/api/communities/${communityId}/members`), token);
 }
 
 // Get community details
 export async function getCommunityDetails(communityId: string, token?: string | null): Promise<any | null> {
-  return safeGetObject(`${API_BASE_URL}/api/communities/${communityId}`, token);
+  return safeGetObject(getApiPath(`/api/communities/${communityId}`), token);
 }
 
-// Get empty activity history 
+// Get empty activity history
 export async function getActivityHistory(entity: 'community' | 'user' | 'post', id: string, token?: string | null): Promise<any[]> {
   return []; // Return empty activities for now
 }
@@ -94,7 +93,7 @@ export async function getActivityHistory(entity: 'community' | 'user' | 'post', 
 export async function getPostComments(postId: string, threaded: boolean = false): Promise<any[]> {
   try {
     // Use the actual API endpoint
-    const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/comments${threaded ? '?threaded=true' : ''}`);
+    const response = await fetch(getApiPath(`/api/posts/${postId}/comments${threaded ? '?threaded=true' : ''}`));
     if (!response.ok) {
       console.warn(`Error fetching comments for post ${postId}: ${response.status}`);
       return []; // Return empty array on error
@@ -126,7 +125,7 @@ export async function getUserVoteOnPost(postId: string, token?: string | null): 
       'Authorization': `Bearer ${token}`
     };
     
-    const response = await fetch(`${API_BASE_URL}/api/votes/post/${postId}/user`, { headers });
+    const response = await fetch(getApiPath(`/api/votes/post/${postId}/user`), { headers });
     if (!response.ok) {
       console.warn(`Vote endpoint failed with status: ${response.status}`);
       return 0; // Return 0 (no vote) on error
