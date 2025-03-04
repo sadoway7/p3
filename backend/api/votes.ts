@@ -24,7 +24,7 @@ export async function voteOnPost(userId: string, postId: string, value: number):
     conn = await pool.getConnection();
     
     // Check if the post exists
-    const [post] = await conn.query('SELECT * FROM posts WHERE id = ?', [postId]);
+    const [post] = await conn.query('SELECT * FROM post WHERE id = ?', [postId]);
     if (!post) {
       throw new Error('Post not found');
     }
@@ -39,7 +39,7 @@ export async function voteOnPost(userId: string, postId: string, value: number):
     
     // Check if the user has already voted on this post
     const [existingVote] = await conn.query(
-      'SELECT * FROM votes WHERE user_id = ? AND post_id = ?',
+      'SELECT * FROM vote WHERE user_id = ? AND post_id = ?',
       [userId, postId]
     );
     
@@ -47,7 +47,7 @@ export async function voteOnPost(userId: string, postId: string, value: number):
       // If value is 0, remove the vote if it exists
       if (existingVote) {
         await conn.query(
-          'DELETE FROM votes WHERE user_id = ? AND post_id = ?',
+          'DELETE FROM vote WHERE user_id = ? AND post_id = ?',
           [userId, postId]
         );
         return { message: 'Vote removed' };
@@ -58,14 +58,14 @@ export async function voteOnPost(userId: string, postId: string, value: number):
     if (existingVote) {
       // Update the existing vote
       await conn.query(
-        'UPDATE votes SET value = ? WHERE user_id = ? AND post_id = ?',
+        'UPDATE vote SET value = ? WHERE user_id = ? AND post_id = ?',
         [value, userId, postId]
       );
       return { message: 'Vote updated' };
     } else {
       // Insert a new vote
       await conn.query(
-        'INSERT INTO votes (user_id, post_id, value) VALUES (?, ?, ?)',
+        'INSERT INTO vote (user_id, post_id, value) VALUES (?, ?, ?)',
         [userId, postId, value]
       );
       return { message: 'Vote added' };
@@ -89,7 +89,7 @@ export async function voteOnComment(userId: string, commentId: string, value: nu
     conn = await pool.getConnection();
     
     // Check if the comment exists
-    const [comment] = await conn.query('SELECT * FROM comments WHERE id = ?', [commentId]);
+    const [comment] = await conn.query('SELECT * FROM comment WHERE id = ?', [commentId]);
     if (!comment) {
       throw new Error('Comment not found');
     }
@@ -104,7 +104,7 @@ export async function voteOnComment(userId: string, commentId: string, value: nu
     
     // Check if the user has already voted on this comment
     const [existingVote] = await conn.query(
-      'SELECT * FROM votes WHERE user_id = ? AND comment_id = ?',
+      'SELECT * FROM vote WHERE user_id = ? AND comment_id = ?',
       [userId, commentId]
     );
     
@@ -112,7 +112,7 @@ export async function voteOnComment(userId: string, commentId: string, value: nu
       // If value is 0, remove the vote if it exists
       if (existingVote) {
         await conn.query(
-          'DELETE FROM votes WHERE user_id = ? AND comment_id = ?',
+          'DELETE FROM vote WHERE user_id = ? AND comment_id = ?',
           [userId, commentId]
         );
         return { message: 'Vote removed' };
@@ -123,14 +123,14 @@ export async function voteOnComment(userId: string, commentId: string, value: nu
     if (existingVote) {
       // Update the existing vote
       await conn.query(
-        'UPDATE votes SET value = ? WHERE user_id = ? AND comment_id = ?',
+        'UPDATE vote SET value = ? WHERE user_id = ? AND comment_id = ?',
         [value, userId, commentId]
       );
       return { message: 'Vote updated' };
     } else {
       // Insert a new vote
       await conn.query(
-        'INSERT INTO votes (user_id, comment_id, value) VALUES (?, ?, ?)',
+        'INSERT INTO vote (user_id, comment_id, value) VALUES (?, ?, ?)',
         [userId, commentId, value]
       );
       return { message: 'Vote added' };
@@ -149,7 +149,7 @@ export async function getUserPostVote(userId: string, postId: string): Promise<n
   try {
     conn = await pool.getConnection();
     const [vote] = await conn.query(
-      'SELECT value FROM votes WHERE user_id = ? AND post_id = ?',
+      'SELECT value FROM vote WHERE user_id = ? AND post_id = ?',
       [userId, postId]
     );
     
@@ -168,7 +168,7 @@ export async function getUserCommentVote(userId: string, commentId: string): Pro
   try {
     conn = await pool.getConnection();
     const [vote] = await conn.query(
-      'SELECT value FROM votes WHERE user_id = ? AND comment_id = ?',
+      'SELECT value FROM vote WHERE user_id = ? AND comment_id = ?',
       [userId, commentId]
     );
     
@@ -190,7 +190,7 @@ export async function getPostVoteCounts(postId: string): Promise<{upvotes: numbe
       `SELECT 
         COUNT(CASE WHEN value = 1 THEN 1 END) as upvotes,
         COUNT(CASE WHEN value = -1 THEN 1 END) as downvotes
-      FROM votes 
+      FROM vote
       WHERE post_id = ?`,
       [postId]
     );
@@ -220,7 +220,7 @@ export async function getCommentVoteCounts(commentId: string): Promise<{upvotes:
       `SELECT 
         COUNT(CASE WHEN value = 1 THEN 1 END) as upvotes,
         COUNT(CASE WHEN value = -1 THEN 1 END) as downvotes
-      FROM votes 
+      FROM vote
       WHERE comment_id = ?`,
       [commentId]
     );
@@ -243,9 +243,9 @@ export async function getCommentVoteCounts(commentId: string): Promise<{upvotes:
 
 // Helper function to update SQL queries to include votes
 export function includePostVotesInQuery(baseQuery: string): string {
-  return baseQuery + `, COALESCE((SELECT SUM(value) FROM votes v WHERE v.post_id = p.id), 0) as votes`;
+  return baseQuery + `, COALESCE((SELECT SUM(value) FROM vote v WHERE v.post_id = p.id), 0) as votes`;
 }
 
 export function includeCommentVotesInQuery(baseQuery: string): string {
-  return baseQuery + `, COALESCE((SELECT SUM(value) FROM votes v WHERE v.comment_id = c.id), 0) as votes`;
+  return baseQuery + `, COALESCE((SELECT SUM(value) FROM vote v WHERE v.comment_id = c.id), 0) as votes`;
 }

@@ -35,7 +35,7 @@ export async function getPostComments(postId: string): Promise<Comment[]> {
     try {
         conn = await pool.getConnection();
         const comments = await conn.query(
-            "SELECT * FROM comments WHERE post_id = ? ORDER BY created_at ASC",
+            "SELECT * FROM comment WHERE post_id = ? ORDER BY created_at ASC",
             [postId]
         );
         return comments;
@@ -53,7 +53,7 @@ export async function getComment(commentId: string): Promise<Comment | null> {
     try {
         conn = await pool.getConnection();
         const [comment] = await conn.query(
-            "SELECT * FROM comments WHERE id = ?",
+            "SELECT * FROM comment WHERE id = ?",
             [commentId]
         );
         return comment || null;
@@ -73,7 +73,7 @@ export async function createComment(userId: string, commentData: CommentInput): 
         conn = await pool.getConnection();
         
         // Build the query based on whether parent_comment_id is provided
-        let query = "INSERT INTO comments (id, content, user_id, post_id";
+        let query = "INSERT INTO comment (id, content, user_id, post_id";
         let values = [id, commentData.content, userId, commentData.post_id];
         
         if (commentData.parent_comment_id) {
@@ -85,7 +85,7 @@ export async function createComment(userId: string, commentData: CommentInput): 
         
         await conn.query(query, values);
         
-        const [newComment] = await conn.query("SELECT * FROM comments WHERE id = ?", [id]);
+        const [newComment] = await conn.query("SELECT * FROM comment WHERE id = ?", [id]);
         return newComment;
     } catch (error) {
         console.error("Error creating comment:", error);
@@ -107,7 +107,7 @@ export async function updateComment(
         
         // Check if the user is the author of the comment
         const [comment] = await conn.query(
-            "SELECT * FROM comments WHERE id = ?",
+            "SELECT * FROM comment WHERE id = ?",
             [commentId]
         );
         
@@ -120,12 +120,12 @@ export async function updateComment(
         }
         
         await conn.query(
-            "UPDATE comments SET content = ?, updated_at = NOW() WHERE id = ?",
+            "UPDATE comment SET content = ?, updated_at = NOW() WHERE id = ?",
             [content, commentId]
         );
         
         const [updatedComment] = await conn.query(
-            "SELECT * FROM comments WHERE id = ?",
+            "SELECT * FROM comment WHERE id = ?",
             [commentId]
         );
         return updatedComment;
@@ -145,7 +145,7 @@ export async function deleteComment(commentId: string, userId: string): Promise<
         
         // Check if the user is the author of the comment
         const [comment] = await conn.query(
-            "SELECT * FROM comments WHERE id = ?",
+            "SELECT * FROM comment WHERE id = ?",
             [commentId]
         );
         
@@ -162,13 +162,13 @@ export async function deleteComment(commentId: string, userId: string): Promise<
         
         // Delete all replies to this comment
         await conn.query(
-            "DELETE FROM comments WHERE parent_comment_id = ?",
+            "DELETE FROM comment WHERE parent_comment_id = ?",
             [commentId]
         );
         
         // Delete the comment itself
         const result = await conn.query(
-            "DELETE FROM comments WHERE id = ?",
+            "DELETE FROM comment WHERE id = ?",
             [commentId]
         );
         
@@ -192,7 +192,7 @@ export async function getCommentReplies(commentId: string): Promise<Comment[]> {
     try {
         conn = await pool.getConnection();
         const replies = await conn.query(
-            "SELECT * FROM comments WHERE parent_comment_id = ? ORDER BY created_at ASC",
+            "SELECT * FROM comment WHERE parent_comment_id = ? ORDER BY created_at ASC",
             [commentId]
         );
         return replies;
@@ -218,8 +218,8 @@ export async function getThreadedComments(postId: string): Promise<ThreadedComme
         
         // Get all comments for the post
         const comments: ThreadedComment[] = await conn.query(
-            "SELECT c.*, u.username FROM comments c " +
-            "JOIN users u ON c.user_id = u.id " +
+            "SELECT c.*, u.username FROM comment c " +
+            "JOIN user u ON c.user_id = u.id " +
             "WHERE c.post_id = ? " +
             "ORDER BY c.created_at ASC",
             [postId]
