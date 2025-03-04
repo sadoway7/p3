@@ -65,7 +65,7 @@ export default function Navbar() {
               </button>
               
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-gray-800 shadow-lg py-2 z-10">
+                <div className="absolute right-0 mt-2 w-56 bg-gray-800 shadow-lg py-2 z-50">
                   <Link
                     to="/profile"
                     className="block px-4 py-3 text-sm text-white hover:bg-gray-700 uppercase"
