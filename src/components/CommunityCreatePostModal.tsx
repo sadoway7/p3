@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createPost } from '../api/posts';
+import { createPost } from '../api/posts-fix';
 import { getCommunity } from '../api/communities';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
   onClose: () => void;
-  communityId: string;
-  communityName?: string;
-  onSuccess?: (postId: string) => void;
-  isMember?: boolean;
+    communityId: string;
+    communityName?: string;
+    onSuccess?: (postId: string) => void;
+    isMember?: boolean;
 }
 
-export default function CommunityCreatePostModal({ onClose, communityId, communityName: propCommunityName, onSuccess, isMember = true }: Props) {
-  const [postTitle, setPostTitle] = useState('');
-  const [postContent, setPostContent] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default function CommunityCreatePostModal({ onClose, communityId, communityName: propCommunityName, onSuccess, isMember }: Props) {
+    const [postTitle, setPostTitle] = useState('');
+    const [postContent, setPostContent] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [communityName, setCommunityName] = useState<string | undefined>(propCommunityName);
   const { user, isAuthenticated, token } = useAuth();

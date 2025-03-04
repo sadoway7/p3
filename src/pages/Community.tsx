@@ -23,11 +23,14 @@ export default function Community() {
         try {
           // Admin users have access to all communities
           if (user.role === 'admin') {
+            console.log("User is admin, setting isMember to true");
             setIsMember(true);
             return;
           }
           if (user?.id) {
+            console.log(`Checking membership for user ${user?.id} in community ${id}, token: ${token}`);
             const memberInfo = await getCommunityMember(id, token, user.id);
+            console.log("Membership check result:", memberInfo);
             setIsMember(!!memberInfo); // Convert to boolean
           }
         } catch (error) {
@@ -65,9 +68,8 @@ export default function Community() {
               <span className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-pink-400 to-purple-500 transform translate-x-0 group-hover:translate-y-1 transition-transform"></span>
             </button>
           ) : isAuthenticated ? (
-            <div className="w-full p-4 bg-gray-100 text-gray-700 mb-8 text-center border border-gray-300 rounded">
-              <p>You must be a member of this community to create posts</p>
-              <p className="text-sm mt-1">Join the community to contribute</p>
+            <div className="w-full p-2 bg-gray-100 text-gray-700 mb-4 text-center border-l-4 border-yellow-400 rounded-sm shadow-sm">
+              <p className="font-medium">Join community to create posts</p>
             </div>
           ) : null}
           

@@ -21,14 +21,38 @@ interface PostItemProps {
   compact?: boolean;
 }
 
+import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowUp, MessageCircle, Share2 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { voteOnPost } from '../api/votes'
+import { formatDistanceToNow } from 'date-fns'
+
+interface PostItemProps {
+  post: {
+    id: string;
+    title: string;
+    content: string;
+    username: string;
+    timestamp: string;
+    comments: number;
+    votes: number;
+    community_id?: string;
+    community_name?: string;
+  };
+  communityId?: string | null;
+  compact?: boolean;
+}
+
 export default function PostItem({ post, communityId, compact = false }: PostItemProps) {
   const { user, token } = useAuth();
   const [votes, setVotes] = useState(post.votes || 0);
   const [userVote, setUserVote] = useState(0); // 0 = no vote, 1 = upvote, -1 = downvote
   const [voteLoading, setVoteLoading] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false); // State for expanding content
 
   // Format timestamp to relative time (e.g., "2 hours ago")
-  const formattedTime = post.timestamp 
+  const formattedTime = post.timestamp
     ? formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })
     : 'unknown time';
 
@@ -79,8 +103,8 @@ export default function PostItem({ post, communityId, compact = false }: PostIte
   if (compact) {
     return (
       <div className="bg-white p-2 shadow-sm rounded-sm border-l-2 border-purple-400 hover:border-l-4 transition-all">
-        <Link 
-          to={`/post/${post.id}`} 
+        <Link
+          to={`/post/${post.id}`}
           className="block hover:text-purple-600 transition-colors"
         >
           <h3 className="font-medium text-sm text-gray-900 truncate">{post.title}</h3>
@@ -100,9 +124,9 @@ export default function PostItem({ post, communityId, compact = false }: PostIte
       <div className="flex items-start space-x-4">
         {/* Voting */}
         <div className="flex flex-col items-center">
-          <button 
+          <button
             className={`p-1 rounded-sm transition-colors ${
-              userVote === 1 
+              userVote === 1
                 ? 'text-teal-600'
                 : 'text-gray-400 hover:text-teal-600'
             }`}
@@ -116,9 +140,9 @@ export default function PostItem({ post, communityId, compact = false }: PostIte
           }`}>
             {votes}
           </span>
-          <button 
+          <button
             className={`p-1 rounded-sm transition-colors transform rotate-180 ${
-              userVote === -1 
+              userVote === -1
                 ? 'text-pink-600'
                 : 'text-gray-400 hover:text-pink-600'
             }`}
@@ -135,7 +159,7 @@ export default function PostItem({ post, communityId, compact = false }: PostIte
           <div className="mb-1 text-xs text-gray-500 flex items-center">
             {post.community_name && !communityId && (
               <>
-                <Link 
+                <Link
                   to={`/community/${post.community_id}`}
                   className="font-medium text-teal-600 hover:underline"
                 >
@@ -150,13 +174,24 @@ export default function PostItem({ post, communityId, compact = false }: PostIte
           </div>
           
           {/* Title and content */}
-          <Link 
-            to={`/post/${post.id}`} 
+          <Link
+            to={`/post/${post.id}`}
             className="block hover:text-teal-600 transition-colors"
           >
             <h3 className="font-bold text-gray-900">{post.title}</h3>
           </Link>
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{post.content}</p>
+          <p className={`text-sm text-gray-600 mt-1 ${isExpanded ? '' : 'line-clamp-2'}`}>
+            {post.content}
+          </p>
+          {/* Toggle for expanding content */}
+          {post.content.length > 100 && ( // Only show toggle if content is long enough
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-teal-600 hover:underline mt-1"
+            >
+              {isExpanded ? 'Show less' : 'Read more'}
+            </button>
+          )}
           
           {/* Actions */}
           <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
